@@ -128,3 +128,9 @@ ol.steps li{margin:8px 0}
 .pill{background:var(--sauge-c);border-color:var(--sauge-c);color:var(--sauge-f)}
 .alert{background:var(--sauge-f)}
 .pgrid .card.on{border-color:var(--sauge)}.pgrid .tick{background:var(--sauge)}
+.chip.on{background:var(--sauge-f);border-color:var(--sauge-f);color:#fff}
+.macros div{background:var(--sauge-c);border-color:var(--sauge-c)}
+.macros b{color:var(--sauge-f)}
+.slot .empty.filled{border-color:var(--sauge);color:var(--sauge-f);background:var(--sauge-c);border-style:solid}
+.day{position:relative}.day.has::after{content:"";position:absolute;left:50%;bottom:5px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--sauge)}
+.day.on.has::after{background:var(--sauge-c)}

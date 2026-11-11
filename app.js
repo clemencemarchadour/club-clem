@@ -259,7 +259,7 @@ function vJournee() {
 }
 function slotRow(day, k, l) {
   const id = (S.plan[day] || {})[k], r = id && R(id);
-  return `<div class="slot">${r ? (r.img ? `<img src="${r.img}" alt="">` : '<div class="empty">✎</div>') : `<div class="empty" data-act="pick" data-v="${day}|${k}">+</div>`}
+  return `<div class="slot">${r ? (r.img ? `<img src="${r.img}" alt="">` : '<div class="empty filled">✎</div>') : `<div class="empty" data-act="pick" data-v="${day}|${k}">+</div>`}
     <div class="grow" ${r ? `data-go="table|recette|${r.id}"` : `data-act="pick" data-v="${day}|${k}"`} style="cursor:pointer"><div class="lab">${l}</div><div>${r ? esc(r.t) : '<span class="muted">Choisir une recette</span>'}</div>${r && (r.kcal || r.time) ? `<div class="small muted">${[r.time, r.kcal ? r.kcal + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
     ${r ? `<button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button>` : ''}</div>`;
 }
@@ -279,7 +279,7 @@ function vSemaine() {
   const plan = S.plan[ui.day] || {};
   const tot = { kcal: 0, p: 0, g: 0, l: 0 };
   SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); });
-  return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
+  return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''} ${Object.values(S.plan[d] || {}).some(Boolean) ? 'has' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
   <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${SLOTS.map(([k, l]) => slotRow(ui.day, k, l)).join('')}</div>
   <div class="card"><span class="lab">Total de la journée</span>
     <div class="macros"><div><b>${tot.kcal}</b><span>kcal</span></div><div><b>${tot.p}</b><span>protéines</span></div><div><b>${tot.g}</b><span>glucides</span></div><div><b>${tot.l}</b><span>lipides</span></div></div>
