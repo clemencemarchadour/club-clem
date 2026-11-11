@@ -83,14 +83,14 @@ function loginView(step = 'email', email = '') {
     <div class="card mt2">
     ${step === 'email' ? `
       <h3>Bienvenue</h3>
-      <p class="muted small">Entre l'adresse e-mail que tu utilises pour tes commandes chez Clem. Tu vas recevoir un e-mail pour te connecter.</p>
+      <p class="muted small">Entre l'adresse e-mail que tu utilises pour tes commandes chez Clem. Tu vas recevoir un code de connexion par e-mail.</p>
       <input id="em" type="email" autocomplete="email" inputmode="email" placeholder="ton@email.fr" value="${esc(email)}">
-      <button class="btn full mt" id="send">Recevoir mon e-mail de connexion</button>`
+      <button class="btn full mt" id="send">Recevoir mon code</button>`
       : `
       <h3>Ton code</h3>
       <p class="muted small">Un e-mail vient d'être envoyé à <b>${esc(email)}</b> (pense à regarder dans tes spams).</p>
-      <p class="small"><b>N'appuie pas sur le lien.</b> Fais un appui long dessus, choisis <b>Copier le lien</b>, puis colle-le ci-dessous.</p>
-      <input id="code" autocomplete="one-time-code" placeholder="Colle le lien ici">
+      <p class="small">Entre ci-dessous le code à 6 chiffres qu'il contient.</p>
+      <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="200" placeholder="······">
       <button class="btn full mt" id="verify">Entrer dans le Club</button>
       <p class="center mt"><button class="link" id="again">Changer d'adresse</button></p>`}
       <p class="small" id="err" style="color:#9b2c2c"></p>
@@ -103,7 +103,7 @@ function loginView(step = 'email', email = '') {
       if (!/^\S+@\S+\.\S+$/.test(em)) { $('#err').textContent = "Cette adresse ne semble pas valide."; return; }
       $('#send').disabled = true; $('#send').textContent = 'Envoi…';
       const { error } = await sb.auth.signInWithOtp({ email: em, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname } });
-      if (error) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon e-mail de connexion'; $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Trop de demandes d'un coup. Réessaie dans quelques minutes." : "L'envoi n'a pas marché : " + error.message; return; }
+      if (error) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon code'; $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Trop de demandes d'un coup. Réessaie dans quelques minutes." : "L'envoi n'a pas marché : " + error.message; return; }
       localStorage.setItem('cc_email', em); loginView('code', em);
     };
   } else {
@@ -118,12 +118,12 @@ function loginView(step = 'email', email = '') {
         res = await sb.auth.verifyOtp({ token_hash: decodeURIComponent(m[1]), type: ty === 'signup' ? 'signup' : ty === 'invite' ? 'invite' : 'magiclink' });
       } else {
         const token = raw.replace(/\D/g, '');
-        if (token.length < 6) { $('#err').textContent = 'Colle le lien reçu par e-mail, ou entre le code.'; return; }
+        if (token.length < 6) { $('#err').textContent = 'Le code fait 6 chiffres.'; return; }
         $('#verify').disabled = true;
         res = await sb.auth.verifyOtp({ email, token, type: 'email' });
       }
       const { error } = res;
-      if (error) { $('#verify').disabled = false; $('#err').textContent = 'Ce lien ne fonctionne pas ou a expiré. Redemande un e-mail.'; return; }
+      if (error) { $('#verify').disabled = false; $('#err').textContent = 'Ce code ne fonctionne pas ou a expiré. Redemande un code.'; return; }
       boot();
     };
   }
