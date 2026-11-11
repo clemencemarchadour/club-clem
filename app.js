@@ -76,13 +76,40 @@ function nav() {
 }
 
 /* ---------- connexion ---------- */
-function loginView(step = 'email', email = '') {
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; if (!isStandalone() && document.getElementById('skip')) installView(); });
+const UA = navigator.userAgent;
+const IS_IOS = /iphone|ipad|ipod/i.test(UA), IN_APP = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|TikTok|musical_ly|Line\//i.test(UA), IOS_CHROME = /CriOS|FxiOS|EdgiOS/i.test(UA);
+const SHARE_ICO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>';
+function installSteps() {
+  const st = (n, t) => `<div class="row" style="align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--filet)"><span style="width:28px;height:28px;border-radius:50%;background:var(--brun);color:var(--ivoire);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none">${n}</span><div style="padding-top:3px">${t}</div></div>`;
+  if (IN_APP) return st(1, `Tu es dans le navigateur d'Instagram (ou d'une autre app) : il ne permet pas d'installer le Club. Appuie sur les <b>trois petits points ⋯</b> en haut à droite, puis sur <b>Ouvrir dans ${IS_IOS ? 'Safari' : 'le navigateur'}</b>.`) + st(2, `Une fois la page ouverte, suis les étapes qui s'afficheront.`);
+  if (IS_IOS && IOS_CHROME) return st(1, `Appuie sur l'icône <b>Partager</b> ${SHARE_ICO}, en haut à droite à côté de l'adresse.`) + st(2, `Choisis <b>Sur l'écran d'accueil</b> (fais défiler si besoin), puis <b>Ajouter</b>.`) + st(3, `Ferme cette page et ouvre l'icône <b>Club Clem</b> qui vient d'apparaître sur ton écran d'accueil.`);
+  if (IS_IOS) return st(1, `Appuie sur l'icône <b>Partager</b> ${SHARE_ICO}, en bas de l'écran (sur certains iPhone, elle est dans le menu <b>⋯</b>).`) + st(2, `Fais défiler et choisis <b>Sur l'écran d'accueil</b>, puis <b>Ajouter</b> en haut à droite.`) + st(3, `Ferme Safari et ouvre l'icône <b>Club Clem</b> qui vient d'apparaître sur ton écran d'accueil.`);
+  if (deferredPrompt) return `<button class="btn full mt" id="inst">Installer le Club sur mon téléphone</button>` + st(2, `Ouvre ensuite l'icône <b>Club Clem</b> sur ton écran d'accueil.`);
+  return st(1, `Ouvre le menu <b>⋮</b> de ton navigateur, en haut à droite.`) + st(2, `Choisis <b>Installer l'application</b> ou <b>Ajouter à l'écran d'accueil</b>.`) + st(3, `Ouvre l'icône <b>Club Clem</b> qui vient d'apparaître sur ton écran d'accueil.`);
+}
+function installView() {
+  document.body.classList.add('nonav');
+  app.innerHTML = `<div class="wrap" style="padding-top:calc(48px + env(safe-area-inset-top))">
+    <div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div>
+    <div class="card mt2"><span class="lab">Étape 1 sur 2</span><h3 class="mt">D'abord, installe le Club sur ton téléphone</h3>
+    <p class="small muted">C'est gratuit et ça prend 10 secondes. Le Club s'ouvrira ensuite comme une vraie app, depuis ton écran d'accueil.</p>
+    ${installSteps()}</div>
+    <div class="card"><span class="lab">Étape 2 sur 2</span><p style="margin:8px 0 0">Dans l'app installée, entre l'adresse e-mail de tes commandes : tu recevras ton code de connexion.</p></div>
+    <p class="center mt"><button class="link small" id="skip">Je préfère continuer sans installer</button></p></div>`;
+  $('#skip').onclick = () => loginView('email', localStorage.getItem('cc_email') || '', true);
+  const ib = $('#inst'); if (ib) ib.onclick = async () => { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; installView(); };
+}
+function loginView(step = 'email', email = '', forced = false) {
+  if (step === 'email' && !forced && !isStandalone() && !sessionStorage.getItem('cc_skip')) { installView(); return; }
+  if (forced) sessionStorage.setItem('cc_skip', '1');
   document.body.classList.add('nonav');
   app.innerHTML = `<div class="wrap" style="padding-top:calc(60px + env(safe-area-inset-top))">
     <div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div>
     <div class="card mt2">
     ${step === 'email' ? `
-      <h3>Bienvenue</h3>
+      <h3>${isStandalone() ? 'Bienvenue dans le Club' : 'Bienvenue'}</h3>
       <p class="muted small">Entre l'adresse e-mail que tu utilises pour tes commandes chez Clem. Tu vas recevoir un code de connexion par e-mail.</p>
       <input id="em" type="email" autocomplete="email" inputmode="email" placeholder="ton@email.fr" value="${esc(email)}">
       <button class="btn full mt" id="send">Recevoir mon code</button>`
@@ -95,7 +122,6 @@ function loginView(step = 'email', email = '') {
       <p class="center mt"><button class="link" id="again">Changer d'adresse</button></p>`}
       <p class="small" id="err" style="color:#9b2c2c"></p>
     </div>
-    ${installHint()}
   </div>`;
   if (step === 'email') {
     $('#send').onclick = async () => {
