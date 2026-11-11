@@ -394,6 +394,7 @@ function vRecette(id) {
   <div class="card"><span class="lab">Ingrédients</span><ul class="clean mt">${(r.ing || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>
   <div class="card"><span class="lab">Préparation</span><ol class="steps">${(r.steps || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
   ${r.note ? `<div class="note">${esc(r.note)}<div class="lab" style="font-style:normal;margin-top:6px">La note de Clem</div></div>` : ''}
+  ${r.air ? `<div class="card" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab" style="color:var(--sauge-f)">Au air fryer</span><p style="margin:8px 0 0">${esc(r.air)}</p></div>` : ''}
   ${r.alt ? `<div class="card"><span class="lab">Variante</span><p style="margin:8px 0 0">${esc(r.alt)}</p></div>` : ''}
   ${String(r.id).startsWith('own') ? `<button class="link mt" data-act="delOwn" data-v="${r.id}">Supprimer cette recette</button>` : ''}`;
 }
