@@ -471,7 +471,7 @@ function vExo(k) {
 
 /* ---------- Mon rituel ---------- */
 function todayPrises(day = today()) {
-  return Object.keys(S.mine).map(P).filter(Boolean).filter(p => {
+  return C.produits.filter(p => S.mine[p.id]).filter(p => {
     if (p.id !== 'gut') return true;
     const n = diffDays(S.mine.gut.start, day); return n < 30 || (n - 30) % 2 === 0;
   });
@@ -490,7 +490,7 @@ function vRituel() {
   </div>
   <div class="card"><span class="lab">${cap(MOIS[new Date().getMonth()])}</span>${calendar()}</div>
   <div class="row between mt2"><h3>Mes compléments</h3><button class="link" data-go="rituel|choix|">Modifier</button></div>
-  ${Object.keys(S.mine).map(P).filter(Boolean).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">Boîte commencée le ${parse(S.mine[p.id].start).getDate()} ${MOIS[parse(S.mine[p.id].start).getMonth()]}</div></div><span class="muted">›</span></div>`).join('')}
+  ${C.produits.filter(p => S.mine[p.id]).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">Boîte commencée le ${parse(S.mine[p.id].start).getDate()} ${MOIS[parse(S.mine[p.id].start).getMonth()]}</div></div><span class="muted">›</span></div>`).join('')}
   <h3 class="mt2">Toute la gamme</h3>
   ${C.produits.map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">${esc(cap(p.phrase || ''))}</div></div><span class="muted">›</span></div>`).join('')}
   <a class="btn full mt" href="${C.shop}" target="_blank">Commander chez Clem</a>
