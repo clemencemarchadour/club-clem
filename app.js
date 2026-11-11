@@ -556,11 +556,34 @@ function todayPrises(day = today()) {
     const n = diffDays(S.mine.gut.start, day); return n < 30 || (n - 30) % 2 === 0;
   });
 }
+function boxDays(id, first) { return id === 'gut' && !first ? 60 : 30; }
+function stockLeft(id) {
+  const m = S.mine[id]; if (!m) return null;
+  const end = boxDays(id, true) + (m.extra || 0) * boxDays(id, false);
+  return end - diffDays(m.start, today());
+}
+function stockEnd(id) { const l = stockLeft(id); return l === null ? null : addDays(today(), l); }
+function vStock(id) {
+  const p = P(id), f = ui.stock || (ui.stock = { id, when: S.mine[id] ? null : 0, date: S.mine[id] ? S.mine[id].start : today(), extra: S.mine[id] ? (S.mine[id].extra || 0) : 0 });
+  const W = [[0, "Aujourd'hui"], [7, 'Il y a 1 semaine'], [14, 'Il y a 2 semaines'], [21, 'Il y a 3 semaines'], ['d', 'Je choisis la date']];
+  const start = f.when === 'd' || f.when === null ? f.date : addDays(today(), -f.when);
+  const tmp = { start, extra: f.extra }, keep = S.mine[id]; S.mine[id] = tmp; const left = stockLeft(id); if (keep) S.mine[id] = keep; else delete S.mine[id];
+  return `${back('Retour', ui.stockFrom || 'rituel')}<h2>${esc(p.name)}</h2><p class="muted small">Deux petites questions pour que je te prévienne au bon moment quand ton stock arrive à sa fin.</p>
+  <div class="card"><span class="lab">Quand as-tu commencé ta boîte actuelle ?</span>
+  <div class="chips mt" style="flex-wrap:wrap;overflow:visible">${W.map(([v, l]) => `<button class="chip ${f.when === v || (v === 'd' && f.when === null) ? 'on' : ''}" data-act="stW" data-v="${v}">${l}</button>`).join('')}</div>
+  ${f.when === 'd' || f.when === null ? `<div class="field mt"><input type="date" id="st_d" max="${today()}" value="${f.date}"></div>` : ''}</div>
+  <div class="card"><span class="lab">Combien de boîtes as-tu encore d'avance ?</span>
+  <div class="chips mt" style="flex-wrap:wrap;overflow:visible">${[[0, 'Aucune'], [1, '1 boîte'], [2, '2 boîtes'], [3, '3 boîtes ou plus']].map(([v, l]) => `<button class="chip ${f.extra === v ? 'on' : ''}" data-act="stX" data-v="${v}">${l}</button>`).join('')}</div>
+  <p class="small muted" style="margin:10px 0 0">Par exemple, avec un rituel de 3 mois, tu as 2 boîtes d'avance quand tu commences la première.</p></div>
+  <div class="card" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab" style="color:var(--sauge-f)">Ton stock</span><p style="margin:6px 0 0">${left > 0 ? `Il te reste environ <b>${left} jour${left > 1 ? 's' : ''}</b> de ${esc(p.name)}. Je te préviendrai 5 jours avant la fin.` : `Ta boîte de ${esc(p.name)} devrait être terminée. Pense à recommander !`}</p></div>
+  <button class="btn full mt" data-act="stSave">C'est bon</button>`;
+}
 function vRituel() {
+  if (ui.sub === 'stock') return vStock(ui.arg);
   if (ui.sub === 'fiche') return vFiche(ui.arg);
   if (ui.sub === 'choix' || !Object.keys(S.mine).length) return vChoix();
   const t = today(), pr = todayPrises(), tk = S.taken[t] || {};
-  const low = Object.entries(S.mine).map(([id, m]) => ({ p: P(id), left: 30 - diffDays(m.start, t) })).filter(x => x.p && x.left <= 5);
+  const low = Object.entries(S.mine).map(([id, m]) => ({ p: P(id), left: stockLeft(id) })).filter(x => x.p && x.left <= 5);
   return `${headBlock()}
   ${low.map(x => `<div class="alert"><span class="lab" style="color:var(--filet)">Bientôt en rupture</span><h3 class="mt">${x.left > 0 ? `Il te reste environ ${x.left} jour${x.left > 1 ? 's' : ''} de ${esc(x.p.name)}` : `Ta boîte de ${esc(x.p.name)} doit être terminée`}</h3>
     <div class="grid2 mt"><a class="btn sm" href="${x.p.link || C.shop}" target="_blank">Je recommande chez Clem</a><button class="btn sm" style="background:transparent;color:var(--ivoire);border:1px solid var(--ivoire)" data-act="newBox" data-v="${x.p.id}">J'ai reçu ma boîte</button></div></div>`).join('')}
@@ -570,7 +593,7 @@ function vRituel() {
   </div>
   <div class="card"><span class="lab">${cap(MOIS[new Date().getMonth()])}</span>${calendar()}</div>
   <div class="row between mt2"><h3>Mes compléments</h3><button class="link" data-go="rituel|choix|">Modifier</button></div>
-  ${C.produits.filter(p => S.mine[p.id]).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">Boîte commencée le ${parse(S.mine[p.id].start).getDate()} ${MOIS[parse(S.mine[p.id].start).getMonth()]}</div></div><span class="muted">›</span></div>`).join('')}
+  ${C.produits.filter(p => S.mine[p.id]).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">${stockLeft(p.id) > 0 ? `Stock : environ ${stockLeft(p.id)} jour${stockLeft(p.id) > 1 ? 's' : ''}` : 'Stock terminé'}</div></div><span class="muted">›</span></div>`).join('')}
   <h3 class="mt2">Toute la gamme</h3>
   ${C.produits.map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">${esc(cap(p.phrase || ''))}</div></div><span class="muted">›</span></div>`).join('')}
   <a class="btn full mt" href="${C.shop}" target="_blank">Commander chez Clem</a>
@@ -598,6 +621,7 @@ function vFiche(id) {
   <h1 class="mt">${esc(p.name)}</h1><p class="muted">${esc(cap(p.phrase || ''))}</p>
   ${sec('Pour qui', 'pourqui')}${sec("Ce qu'il fait", 'fait')}${sec('Les actifs clés', 'actifs')}${sec('Comment le prendre', 'comment')}
   ${p.note ? `<div class="note">${esc(p.note)}<div class="lab" style="font-style:normal;margin-top:6px">La note de Clem</div></div>` : ''}
+  ${S.mine[id] ? `<div class="card row between" style="background:var(--sauge-c);border-color:var(--sauge-c)"><div><span class="lab" style="color:var(--sauge-f)">Mon stock</span><div>${stockLeft(id) > 0 ? `Environ ${stockLeft(id)} jour${stockLeft(id) > 1 ? 's' : ''}` : 'Terminé'}</div></div><button class="link" data-act="stEdit" data-v="${id}">Modifier</button></div>` : ''}
   <button class="btn ${S.mine[id] ? 'ghost' : ''} full mt" data-act="toggleMine" data-v="${id}">${S.mine[id] ? 'Retirer de mon rituel' : 'Ajouter à mon rituel'}</button>
   <a class="btn soft full mt" href="${p.link || C.shop}" target="_blank">Commander chez Clem</a>
   ${p.precautions ? `<p class="fine mt2"><b>Précautions.</b> ${esc(p.precautions)}</p>` : ''}
@@ -719,8 +743,17 @@ const ACT = {
   pNext: () => { const seq = seqOf(PL.id), run = PL.run; stopTimer(); PL.resting = false; PL.i++; if (PL.i >= seq.length) { finishSeance(); return; } PL.left = seq[PL.i].sec; render(); if (run) ACT.pPlay(); },
   pPrev: () => { const run = PL.run; stopTimer(); PL.resting = false; PL.i = Math.max(0, PL.i - 1); PL.left = seqOf(PL.id)[PL.i].sec; render(); if (run) ACT.pPlay(); },
   endSeance: () => { PL = null; go('bouger'); },
-  toggleMine: v => { if (S.mine[v]) delete S.mine[v]; else S.mine[v] = { start: today() }; save(); render(); },
-  newBox: v => { S.mine[v] = { start: today() }; save(); render(); toast('Nouvelle boîte notée'); },
+  toggleMine: v => { if (S.mine[v]) { delete S.mine[v]; save(); render(); return; } ui.stock = null; ui.stockFrom = 'rituel|' + (ui.sub || (Object.keys(S.mine).length ? '' : 'choix')) + '|' + (ui.arg || ''); go('rituel', 'stock', v); },
+  stEdit: v => { ui.stock = null; ui.stockFrom = 'rituel|fiche|' + v; go('rituel', 'stock', v); },
+  newBox: v => { ui.stock = { id: v, when: 0, date: today(), extra: 0 }; ui.stockFrom = 'rituel||'; go('rituel', 'stock', v); },
+  stW: v => { const d = $('#st_d'); if (d && d.value) ui.stock.date = d.value; ui.stock.when = v === 'd' ? 'd' : +v; render(); },
+  stX: v => { const d = $('#st_d'); if (d && d.value) ui.stock.date = d.value; ui.stock.extra = +v; render(); },
+  stSave: () => {
+    const f = ui.stock, d = $('#st_d'); if (d && d.value) f.date = d.value > today() ? today() : d.value;
+    const start = f.when === 'd' || f.when === null ? f.date : addDays(today(), -f.when);
+    S.mine[ui.arg] = { start, extra: f.extra }; ui.stock = null; save();
+    const [t, sb, a] = (ui.stockFrom || 'rituel||').split('|'); go(t, sb || null, a || null); toast('Stock enregistré');
+  },
   feel: v => { const [k, n] = v.split('|'), d = ui.jday || today(); const j = L.journal[d] = L.journal[d] || {}; j[k] = +n; save(); render(); },
   jday: v => { const d = addDays(ui.jday || today(), +v); if (d > today()) return; ui.jday = d; render(); },
   showMes: () => { L.showMes = !L.showMes; save(); render(); },
