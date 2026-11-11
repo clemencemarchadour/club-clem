@@ -287,9 +287,12 @@ function vRecette(id) {
   ${String(r.id).startsWith('own') ? `<button class="link mt" data-act="delOwn" data-v="${r.id}">Supprimer cette recette</button>` : ''}`;
 }
 function vAjout() {
-  return `${back('Recettes', 'table')}<h2>Ma recette</h2>
+  const pd = ui.pending;
+  const sel = v => pd && ((pd.slot === 'b' && v === 'sucre') || (pd.slot !== 'b' && v === 'plat')) ? ' selected' : '';
+  return `${pd ? `<button class="back" data-act="cancelOwn">‹ Retour</button>` : back('Recettes', 'table')}<h2>Ma recette</h2>
+  ${pd ? `<p class="small muted">Elle sera ajoutée à : ${SLOTS.find(x => x[0] === pd.slot)[1].toLowerCase()}, ${esc(longDate(pd.day))}.</p>` : ''}
   <div class="field mt"><label>Nom de la recette</label><input id="o_t" placeholder="Ex. : Salade de ma grand-mère"></div>
-  <div class="field mt"><label>Type</label><select id="o_type"><option value="plat">Plat</option><option value="sucre">Petit-déjeuner sucré</option><option value="sale">Petit-déjeuner salé</option><option value="dessert">Dessert</option></select></div>
+  <div class="field mt"><label>Type</label><select id="o_type"><option value="plat"${sel('plat')}>Plat</option><option value="sucre"${sel('sucre')}>Petit-déjeuner sucré</option><option value="sale">Petit-déjeuner salé</option><option value="dessert">Dessert</option></select></div>
   <div class="grid2 mt"><div class="field"><label>Temps</label><input id="o_time" placeholder="20 min"></div><div class="field"><label>Calories par portion</label><input id="o_kcal" inputmode="numeric" placeholder="facultatif"></div></div>
   <div class="field mt"><label>Ingrédients (un par ligne)</label><textarea id="o_ing"></textarea></div>
   <div class="field mt"><label>Préparation (une étape par ligne)</label><textarea id="o_steps"></textarea></div>
@@ -307,9 +310,11 @@ function vCourses() {
 function pickSheet(day, slot) {
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? (r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat)) : (r.type !== 'pdj' && !['sucre', 'sale'].includes(r.cat)));
   const el = sheet(`<div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="heart" data-x>×</button></div>
-    <p class="small muted">Les idées de Clem</p>
+    <button class="btn ghost full" data-own>+ Ajouter ma propre recette</button>
+    <p class="small muted mt">Ou choisis parmi les idées de Clem :</p>
     ${opts.map(r => `<div class="card tap row" data-pick="${r.id}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('')}`);
   el.querySelector('[data-x]').onclick = () => el.remove();
+  el.querySelector('[data-own]').onclick = () => { el.remove(); ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
   el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); el.remove(); render(); toast('Ajouté à ta journée'); });
 }
 
@@ -518,8 +523,12 @@ const ACT = {
     const ty = $('#o_type').value;
     const r = { id: 'own' + Date.now(), t, type: ['sucre', 'sale'].includes(ty) ? 'pdj' : 'plat', cat: ty === 'plat' ? 'plat' : ty, tag: 'Ma recette', time: $('#o_time').value.trim(), kcal: parseInt($('#o_kcal').value) || 0, p: 0, g: 0, l: 0,
       ing: $('#o_ing').value.split('\n').map(x => x.trim()).filter(Boolean), steps: $('#o_steps').value.split('\n').map(x => x.trim()).filter(Boolean) };
-    S.own.push(r); save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
+    S.own.push(r);
+    const pd = ui.pending; ui.pending = null;
+    if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
+    save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
   },
+  cancelOwn: () => { const pd = ui.pending; ui.pending = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
   level: v => { S.level = v; save(); render(); },
