@@ -298,10 +298,10 @@ function vAjout() {
   <div class="grid2 mt"><div class="field"><label>Type</label><select id="o_type"><option value="plat"${sel('plat')}>Plat</option><option value="sucre"${sel('sucre')}>Petit-déj sucré</option><option value="sale">Petit-déj salé</option><option value="dessert">Dessert</option></select></div>
   <div class="field"><label>Nombre de portions</label><input id="o_pers" inputmode="numeric" value="${d.pers}"></div></div>
   <div class="card"><span class="lab">Ingrédients</span>
-  <p class="fine" style="margin:6px 0 10px">Choisis l'aliment dans la liste, puis la quantité en grammes ou à l'unité : les calories et les macros se calculent toutes seules.</p>
-  <datalist id="foods">${C.foods.map(f => `<option value="${esc(f[0])}">`).join('')}</datalist>
+  <p class="fine" style="margin:6px 0 10px">Tape l'aliment comme tu le dis, par exemple « 2 œufs » ou « 150 g de riz », puis touche la bonne proposition : les calories et les macros se calculent toutes seules.</p>
   ${d.rows.map((r, i) => { const f = foodOf(r.f), hasU = f && f[5]; if (!hasU) r.u = 'g'; else if (!r.u) r.u = 'u';
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input list="foods" data-row="${i}" data-k="f" placeholder="Aliment" value="${esc(r.f)}" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input data-row="${i}" data-k="f" placeholder="Tape un aliment : œuf, riz, pomme…" value="${esc(r.f)}" autocomplete="off" autocorrect="off" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
+    <div id="sug_${i}"></div>
     <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
     <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
   <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
@@ -309,7 +309,23 @@ function vAjout() {
   <div class="field mt"><label>Préparation (facultatif, une étape par ligne)</label><textarea id="o_steps">${esc(d.steps || '')}</textarea></div>
   <button class="btn full mt" data-act="saveOwn">Enregistrer</button>`;
 }
+const norm = t => String(t || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const sing = w => w.length > 3 ? w.replace(/(s|x)$/, '') : w;
+const splitQty = t => { const m = String(t || '').trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:g\b|gr\b|grammes?\b)?\s*(?:de |d')?(.*)$/i); return m ? { q: m[1].replace(',', '.'), g: /^\d+(?:[.,]\d+)?\s*(g|gr|gramme)/i.test(t), name: m[2] } : { q: '', name: t }; };
+function suggest(t) {
+  const words = norm(splitQty(t).name).split(' ').filter(Boolean).map(sing);
+  if (!words.length) return [];
+  return C.foods.map(f => { const n = norm(f[0]), nw = n.split(' ').map(sing); let sc = 0;
+    for (const w of words) { if (nw.some(x => x === w)) sc += 3; else if (nw.some(x => x.startsWith(w))) sc += 2; else if (n.includes(w)) sc += 1; else return null; }
+    if (nw[0] === words[0] || nw[0].startsWith(words[0])) sc += 2; if (!words.some(w => w.startsWith('cru')) && /\bcrue?s?\b/.test(n)) sc -= 2.5; return [sc - n.length / 100, f]; })
+    .filter(Boolean).sort((a, b) => b[0] - a[0]).slice(0, 6).map(x => x[1]);
+}
 const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
+function resolveRow(r) {
+  if (!r.f || foodOf(r.f)) return;
+  const sq = splitQty(r.f), sg = suggest(r.f);
+  if (sg.length) { r.f = sg[0][0]; if (sq.q && !r.g) { r.g = sq.q; r.u = sg[0][5] && !sq.g ? 'u' : 'g'; } }
+}
 function calcDraft() {
   const d = ui.draft, t = { kcal: 0, p: 0, g: 0, l: 0 }, miss = [];
   d.rows.forEach(r => { const q = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } const g = r.u === 'u' && f[5] ? q * f[5] : q; t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
@@ -591,9 +607,15 @@ function shrink(file, n, square, cb) {
   };
   img.src = url;
 }
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest && e.target.closest('[data-sug]'); if (!b || !ui.draft) return;
+  e.preventDefault(); const r = ui.draft.rows[+b.dataset.sug], sq = splitQty(r.f), f = foodOf(b.dataset.name);
+  r.f = f[0]; if (sq.q && !r.g) r.g = sq.q; r.u = f[5] && !sq.g ? 'u' : 'g'; keepDraft(); render();
+  const q = document.querySelector(`[data-row="${b.dataset.sug}"][data-k="g"]`); if (q && !r.g) q.focus();
+});
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
-  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; keepDraft(); render(); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
   const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
@@ -606,7 +628,8 @@ document.addEventListener('change', e => {
   img.src = url;
 });
 document.addEventListener('input', e => {
-  if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { ui.draft.rows[+e.target.dataset.row][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); }
+  if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
+    if (e.target.dataset.k === 'f') { const box = document.getElementById('sug_' + i); if (box) { const sg = foodOf(e.target.value) ? [] : suggest(e.target.value); box.innerHTML = sg.length ? `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${sg.map(f => `<button class="chip" data-sug="${i}" data-name="${esc(f[0])}">${esc(f[0])}</button>`).join('')}</div>` : (e.target.value.trim().length > 2 ? '<p class="fine" style="margin:6px 0 0">Pas dans la liste : il ne sera pas compté.</p>' : ''); } } }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && PL && PL.run) { /* le minuteur continue en arrière-plan si possible */ } });
 
