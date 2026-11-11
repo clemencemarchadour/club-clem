@@ -298,9 +298,12 @@ function vAjout() {
   <div class="grid2 mt"><div class="field"><label>Type</label><select id="o_type"><option value="plat"${sel('plat')}>Plat</option><option value="sucre"${sel('sucre')}>Petit-déj sucré</option><option value="sale">Petit-déj salé</option><option value="dessert">Dessert</option></select></div>
   <div class="field"><label>Nombre de portions</label><input id="o_pers" inputmode="numeric" value="${d.pers}"></div></div>
   <div class="card"><span class="lab">Ingrédients</span>
-  <p class="fine" style="margin:6px 0 10px">Choisis l'aliment dans la liste et indique son poids : les calories et les macros se calculent toutes seules.</p>
+  <p class="fine" style="margin:6px 0 10px">Choisis l'aliment dans la liste, puis la quantité en grammes ou à l'unité : les calories et les macros se calculent toutes seules.</p>
   <datalist id="foods">${C.foods.map(f => `<option value="${esc(f[0])}">`).join('')}</datalist>
-  ${d.rows.map((r, i) => `<div class="row" style="gap:8px;margin-bottom:8px"><input class="grow" list="foods" data-row="${i}" data-k="f" placeholder="Aliment" value="${esc(r.f)}" style="flex:1"><div class="unit" style="width:96px"><input inputmode="decimal" data-row="${i}" data-k="g" placeholder="0" value="${esc(r.g)}"><span>g</span></div><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>`).join('')}
+  ${d.rows.map((r, i) => { const f = foodOf(r.f), hasU = f && f[5]; if (!hasU) r.u = 'g'; else if (!r.u) r.u = 'u';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input list="foods" data-row="${i}" data-k="f" placeholder="Aliment" value="${esc(r.f)}" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
+    <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
+    <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
   <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
   <div id="o_tot">${totBlock()}</div></div>
   <div class="field mt"><label>Préparation (facultatif, une étape par ligne)</label><textarea id="o_steps">${esc(d.steps || '')}</textarea></div>
@@ -309,7 +312,7 @@ function vAjout() {
 const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
 function calcDraft() {
   const d = ui.draft, t = { kcal: 0, p: 0, g: 0, l: 0 }, miss = [];
-  d.rows.forEach(r => { const g = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
+  d.rows.forEach(r => { const q = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } const g = r.u === 'u' && f[5] ? q * f[5] : q; t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
   const n = Math.max(1, parseInt(d.pers) || 1);
   return { kcal: Math.round(t.kcal / n), p: Math.round(t.p / n), g: Math.round(t.g / n), l: Math.round(t.l / n), miss };
 }
@@ -545,15 +548,15 @@ const ACT = {
     const ty = $('#o_type').value, t = calcDraft(), n = Math.max(1, parseInt(d.pers) || 1);
     const r = { id: 'own' + Date.now(), t: d.t, type: ['sucre', 'sale'].includes(ty) ? 'pdj' : 'plat', cat: ty === 'plat' ? 'plat' : ty, tag: 'Ma recette', time: '', pers: n + (n > 1 ? ' pers.' : ' pers.'),
       kcal: t.kcal, p: t.p, g: t.g, l: t.l, img: d.img || null,
-      ing: d.rows.filter(x => x.f).map(x => (x.g ? x.g + ' g de ' : '') + x.f.replace(/ \(.*\)$/, '')), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
+      ing: d.rows.filter(x => x.f).map(x => { const f = foodOf(x.f); if (!x.g) return x.f; if (f && x.u === 'u' && f[5]) return `${x.f} : ${x.g} ${f[6]}${parseFloat(x.g) > 1 && !f[6].includes(' ') && !/s$/.test(f[6]) ? 's' : ''}`; return `${x.f} : ${x.g} g`; }), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
     S.own.push(r); ui.draft = null;
     const pd = ui.pending; ui.pending = null;
     if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
     save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
   },
   newOwn: () => { ui.draft = null; ui.pending = null; go('table', 'ajout'); },
-  addRow: () => { keepDraft(); ui.draft.rows.push({ f: '', g: '' }); render(); },
-  rmRow: v => { keepDraft(); ui.draft.rows.splice(+v, 1); if (!ui.draft.rows.length) ui.draft.rows.push({ f: '', g: '' }); render(); },
+  addRow: () => { keepDraft(); ui.draft.rows.push({ f: '', g: '', u: '' }); render(); },
+  rmRow: v => { keepDraft(); ui.draft.rows.splice(+v, 1); if (!ui.draft.rows.length) ui.draft.rows.push({ f: '', g: '', u: '' }); render(); },
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
@@ -588,7 +591,7 @@ function shrink(file, n, square, cb) {
 }
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
-  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row]; r[e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; keepDraft(); render(); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
   const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
