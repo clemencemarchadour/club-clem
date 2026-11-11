@@ -312,13 +312,19 @@ function vAjout() {
 const norm = t => String(t || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 const sing = w => w.length > 3 ? w.replace(/(s|x)$/, '') : w;
 const splitQty = t => { const m = String(t || '').trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:g\b|gr\b|grammes?\b)?\s*(?:de |d')?(.*)$/i); return m ? { q: m[1].replace(',', '.'), g: /^\d+(?:[.,]\d+)?\s*(g|gr|gramme)/i.test(t), name: m[2] } : { q: '', name: t }; };
+const STOP = new Set(['de', 'des', 'du', 'la', 'le', 'les', 'au', 'aux', 'a', 'en', 'et', 'd', 'l', 'un', 'une', 'avec', 'sans', 'g', 'gr']);
+let FIDX = null;
+function fidx() { if (!FIDX) FIDX = C.foods.map(f => { const n = norm(f[0]); return { f, n, w: n.split(' ').map(sing) }; }); return FIDX; }
 function suggest(t) {
-  const words = norm(splitQty(t).name).split(' ').filter(Boolean).map(sing);
+  const full = norm(splitQty(t).name), words = full.split(' ').filter(w => w && !STOP.has(w)).map(sing);
   if (!words.length) return [];
-  return C.foods.map(f => { const n = norm(f[0]), nw = n.split(' ').map(sing); let sc = 0;
-    for (const w of words) { if (nw.some(x => x === w)) sc += 3; else if (nw.some(x => x.startsWith(w))) sc += 2; else if (n.includes(w)) sc += 1; else return null; }
-    if (nw[0] === words[0] || nw[0].startsWith(words[0])) sc += 2; if (!words.some(w => w.startsWith('cru')) && /\bcrue?s?\b/.test(n)) sc -= 2.5; return [sc - n.length / 100, f]; })
-    .filter(Boolean).sort((a, b) => b[0] - a[0]).slice(0, 6).map(x => x[1]);
+  const score = (strict) => fidx().map(({ f, n, w: nw }) => { let sc = 0, hit = 0;
+    for (const w of words) { if (nw.includes(w)) { sc += 3; hit++; } else if (nw.some(x => x.startsWith(w))) { sc += 2; hit++; } else if (w.length > 3 && n.includes(w)) { sc += 1; hit++; } else if (strict) return null; }
+    if (!hit) return null; if (!strict) sc -= (words.length - hit) * 3;
+    if (nw[0] === words[0] || nw[0].startsWith(words[0])) sc += 2;
+    if (!words.some(w => w.startsWith('cru')) && /\bcrue?s?\b/.test(n)) sc -= 2.5;
+    if (f[7]) sc += 2.5; if (n === full || n.split(' ').map(sing).join(' ') === full.split(' ').map(sing).join(' ')) sc += 10; return [sc - n.length / 60, f]; }).filter(Boolean).sort((x, y) => y[0] - x[0]).slice(0, 8).map(x => x[1]);
+  const r = score(true); return r.length ? r : score(false);
 }
 const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
 function resolveRow(r) {
