@@ -227,7 +227,7 @@ function vJournee() {
 function slotRow(day, k, l) {
   const id = (S.plan[day] || {})[k], r = id && R(id);
   return `<div class="slot">${r ? (r.img ? `<img src="${r.img}" alt="">` : '<div class="empty">✎</div>') : `<div class="empty" data-act="pick" data-v="${day}|${k}">+</div>`}
-    <div class="grow" ${r ? `data-go="table|recette|${r.id}"` : `data-act="pick" data-v="${day}|${k}"`} style="cursor:pointer"><div class="lab">${l}</div><div>${r ? esc(r.t) : '<span class="muted">Choisir une recette</span>'}</div>${r && r.kcal ? `<div class="small muted">${esc(r.time || '')} · ${r.kcal} kcal</div>` : ''}</div>
+    <div class="grow" ${r ? `data-go="table|recette|${r.id}"` : `data-act="pick" data-v="${day}|${k}"`} style="cursor:pointer"><div class="lab">${l}</div><div>${r ? esc(r.t) : '<span class="muted">Choisir une recette</span>'}</div>${r && (r.kcal || r.time) ? `<div class="small muted">${[r.time, r.kcal ? r.kcal + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
     ${r ? `<button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button>` : ''}</div>`;
 }
 
@@ -264,7 +264,7 @@ function vRecettes() {
   const list = filtered();
   return `<div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="rlist">${list.map(rCard).join('') || '<p class="muted center mt2">Rien ici pour l\'instant.</p>'}</div>
-  <button class="btn ghost full mt" data-go="table|ajout|">+ Ajouter ma propre recette</button>`;
+  <button class="btn ghost full mt" data-act="newOwn">+ Ajouter ma propre recette</button>`;
 }
 function rCard(r) {
   return `<div class="card tap row" data-go="table|recette|${r.id}">${r.img ? `<img class="thumb" src="${r.img}" alt="" loading="lazy">` : '<div class="thumb"></div>'}
@@ -288,15 +288,35 @@ function vRecette(id) {
 }
 function vAjout() {
   const pd = ui.pending;
+  if (!ui.draft) ui.draft = { rows: [{ f: '', g: '' }], pers: 1, img: null };
+  const d = ui.draft;
   const sel = v => pd && ((pd.slot === 'b' && v === 'sucre') || (pd.slot !== 'b' && v === 'plat')) ? ' selected' : '';
-  return `${pd ? `<button class="back" data-act="cancelOwn">‹ Retour</button>` : back('Recettes', 'table')}<h2>Ma recette</h2>
+  return `${pd ? `<button class="back" data-act="cancelOwn">‹ Retour</button>` : `<button class="back" data-act="cancelOwn">‹ Recettes</button>`}<h2>Ma recette</h2>
   ${pd ? `<p class="small muted">Elle sera ajoutée à : ${SLOTS.find(x => x[0] === pd.slot)[1].toLowerCase()}, ${esc(longDate(pd.day))}.</p>` : ''}
-  <div class="field mt"><label>Nom de la recette</label><input id="o_t" placeholder="Ex. : Salade de ma grand-mère"></div>
-  <div class="field mt"><label>Type</label><select id="o_type"><option value="plat"${sel('plat')}>Plat</option><option value="sucre"${sel('sucre')}>Petit-déjeuner sucré</option><option value="sale">Petit-déjeuner salé</option><option value="dessert">Dessert</option></select></div>
-  <div class="grid2 mt"><div class="field"><label>Temps</label><input id="o_time" placeholder="20 min"></div><div class="field"><label>Calories par portion</label><input id="o_kcal" inputmode="numeric" placeholder="facultatif"></div></div>
-  <div class="field mt"><label>Ingrédients (un par ligne)</label><textarea id="o_ing"></textarea></div>
-  <div class="field mt"><label>Préparation (une étape par ligne)</label><textarea id="o_steps"></textarea></div>
+  <label style="display:block;cursor:pointer;margin-top:12px">${d.img ? `<img class="hero" src="${d.img}" alt="">` : `<div class="hero" style="display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;border:1.5px dashed var(--taupe);background:var(--ivoire);color:var(--txt2)">+ Ajouter une photo</div>`}<input type="file" accept="image/*" id="o_img" style="display:none"></label>
+  <div class="field mt"><label>Nom de la recette</label><input id="o_t" placeholder="Ex. : Salade de ma grand-mère" value="${esc(d.t || '')}"></div>
+  <div class="grid2 mt"><div class="field"><label>Type</label><select id="o_type"><option value="plat"${sel('plat')}>Plat</option><option value="sucre"${sel('sucre')}>Petit-déj sucré</option><option value="sale">Petit-déj salé</option><option value="dessert">Dessert</option></select></div>
+  <div class="field"><label>Nombre de portions</label><input id="o_pers" inputmode="numeric" value="${d.pers}"></div></div>
+  <div class="card"><span class="lab">Ingrédients</span>
+  <p class="fine" style="margin:6px 0 10px">Choisis l'aliment dans la liste et indique son poids : les calories et les macros se calculent toutes seules.</p>
+  <datalist id="foods">${C.foods.map(f => `<option value="${esc(f[0])}">`).join('')}</datalist>
+  ${d.rows.map((r, i) => `<div class="row" style="gap:8px;margin-bottom:8px"><input class="grow" list="foods" data-row="${i}" data-k="f" placeholder="Aliment" value="${esc(r.f)}" style="flex:1"><div class="unit" style="width:96px"><input inputmode="decimal" data-row="${i}" data-k="g" placeholder="0" value="${esc(r.g)}"><span>g</span></div><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>`).join('')}
+  <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
+  <div id="o_tot">${totBlock()}</div></div>
+  <div class="field mt"><label>Préparation (facultatif, une étape par ligne)</label><textarea id="o_steps">${esc(d.steps || '')}</textarea></div>
   <button class="btn full mt" data-act="saveOwn">Enregistrer</button>`;
+}
+const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
+function calcDraft() {
+  const d = ui.draft, t = { kcal: 0, p: 0, g: 0, l: 0 }, miss = [];
+  d.rows.forEach(r => { const g = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
+  const n = Math.max(1, parseInt(d.pers) || 1);
+  return { kcal: Math.round(t.kcal / n), p: Math.round(t.p / n), g: Math.round(t.g / n), l: Math.round(t.l / n), miss };
+}
+function totBlock() {
+  const t = calcDraft();
+  return `<div class="macros" style="margin-bottom:4px"><div><b>${t.kcal}</b><span>kcal</span></div><div><b>${t.p}</b><span>protéines</span></div><div><b>${t.g}</b><span>glucides</span></div><div><b>${t.l}</b><span>lipides</span></div></div><p class="fine center" style="margin:0">par portion · valeurs moyennes</p>
+  ${t.miss.length ? `<p class="fine" style="color:#9b2c2c">Non compté (pas dans la liste) : ${t.miss.map(esc).join(', ')}</p>` : ''}`;
 }
 function vCourses() {
   const t = today(), ids = new Set(S.extra);
@@ -314,7 +334,7 @@ function pickSheet(day, slot) {
     <p class="small muted mt">Ou choisis parmi les idées de Clem :</p>
     ${opts.map(r => `<div class="card tap row" data-pick="${r.id}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('')}`);
   el.querySelector('[data-x]').onclick = () => el.remove();
-  el.querySelector('[data-own]').onclick = () => { el.remove(); ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
+  el.querySelector('[data-own]').onclick = () => { el.remove(); ui.draft = null; ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
   el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); el.remove(); render(); toast('Ajouté à ta journée'); });
 }
 
@@ -520,17 +540,21 @@ const ACT = {
   chk: v => { S.checked[v] = !S.checked[v]; save(); render(); },
   clearCourses: () => { S.checked = {}; save(); render(); },
   saveOwn: () => {
-    const t = $('#o_t').value.trim(); if (!t) { toast('Donne un nom à ta recette'); return; }
-    const ty = $('#o_type').value;
-    const r = { id: 'own' + Date.now(), t, type: ['sucre', 'sale'].includes(ty) ? 'pdj' : 'plat', cat: ty === 'plat' ? 'plat' : ty, tag: 'Ma recette', time: $('#o_time').value.trim(), kcal: parseInt($('#o_kcal').value) || 0, p: 0, g: 0, l: 0,
-      ing: $('#o_ing').value.split('\n').map(x => x.trim()).filter(Boolean), steps: $('#o_steps').value.split('\n').map(x => x.trim()).filter(Boolean) };
-    S.own.push(r);
+    const d = ui.draft; d.t = $('#o_t').value.trim(); d.steps = $('#o_steps').value; d.pers = $('#o_pers').value;
+    if (!d.t) { toast('Donne un nom à ta recette'); return; }
+    const ty = $('#o_type').value, t = calcDraft(), n = Math.max(1, parseInt(d.pers) || 1);
+    const r = { id: 'own' + Date.now(), t: d.t, type: ['sucre', 'sale'].includes(ty) ? 'pdj' : 'plat', cat: ty === 'plat' ? 'plat' : ty, tag: 'Ma recette', time: '', pers: n + (n > 1 ? ' pers.' : ' pers.'),
+      kcal: t.kcal, p: t.p, g: t.g, l: t.l, img: d.img || null,
+      ing: d.rows.filter(x => x.f).map(x => (x.g ? x.g + ' g de ' : '') + x.f.replace(/ \(.*\)$/, '')), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
+    S.own.push(r); ui.draft = null;
     const pd = ui.pending; ui.pending = null;
     if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
     save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
   },
-  rmPhoto: () => { delete S.photo; save(); render(); },
-  cancelOwn: () => { const pd = ui.pending; ui.pending = null; go(pd ? pd.from : 'table'); },
+  newOwn: () => { ui.draft = null; ui.pending = null; go('table', 'ajout'); },
+  addRow: () => { keepDraft(); ui.draft.rows.push({ f: '', g: '' }); render(); },
+  rmRow: v => { keepDraft(); ui.draft.rows.splice(+v, 1); if (!ui.draft.rows.length) ui.draft.rows.push({ f: '', g: '' }); render(); },
+  cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
   level: v => { S.level = v; save(); render(); },
@@ -551,7 +575,21 @@ const ACT = {
   },
   logout: async () => { await sb.auth.signOut(); localStorage.removeItem('cc_k'); location.reload(); }
 };
+function keepDraft() { const d = ui.draft; if (!d) return; const q = x => document.getElementById(x); if (q('o_t')) d.t = q('o_t').value; if (q('o_steps')) d.steps = q('o_steps').value; if (q('o_pers')) d.pers = q('o_pers').value; }
+function shrink(file, n, square, cb) {
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    if (square) { const k = Math.min(img.width, img.height); c.width = c.height = n; c.getContext('2d').drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, n, n); }
+    else { const r = Math.min(1, n / Math.max(img.width, img.height)); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); }
+    URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.8));
+  };
+  img.src = url;
+}
 document.addEventListener('change', e => {
+  if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
+  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row]; r[e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
   const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
   img.onload = () => {
@@ -562,7 +600,9 @@ document.addEventListener('change', e => {
   };
   img.src = url;
 });
-document.addEventListener('input', e => { if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
+document.addEventListener('input', e => {
+  if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { ui.draft.rows[+e.target.dataset.row][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); }
+  if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && PL && PL.run) { /* le minuteur continue en arrière-plan si possible */ } });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
