@@ -103,7 +103,7 @@ function loginView(step = 'email', email = '') {
       if (!/^\S+@\S+\.\S+$/.test(em)) { $('#err').textContent = "Cette adresse ne semble pas valide."; return; }
       $('#send').disabled = true; $('#send').textContent = 'Envoi…';
       const { error } = await sb.auth.signInWithOtp({ email: em, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname } });
-      if (error && (error.status === 403 || /réservé|reserve/i.test(error.message || ''))) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon code'; $('#err').innerHTML = "Cet espace est réservé à mes clientes. Si tu as déjà commandé chez moi, essaie avec l'adresse utilisée pour tes commandes."; return; }
+      if (error && (error.status === 403 || /réservé|reserve/i.test(error.message || ''))) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon code'; $('#err').innerHTML = "Cet espace est réservé à mes clientes. Si tu as déjà commandé chez moi, essaie avec l'adresse utilisée pour tes commandes.<br><br><span style='color:var(--brun)'>Pas encore cliente ? Ta première commande t'ouvre les portes du Club.</span><a class='btn full mt' href='https://shop.sellingathome.com/clemencemarchadour/products' target='_blank'>Découvrir la boutique</a>"; return; }
       if (error) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon code'; $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Trop de demandes d'un coup. Réessaie dans quelques minutes." : "L'envoi n'a pas marché : " + error.message; return; }
       localStorage.setItem('cc_email', em); loginView('code', em);
     };
