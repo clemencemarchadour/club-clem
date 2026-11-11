@@ -203,7 +203,8 @@ function streak() {
 }
 function vJournee() {
   const t = today(), d = new Date();
-  const mot = C.mots[d.getDay() % C.mots.length];
+  const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const mot = (C.special && C.special[md]) || C.mots[((diffDays('2026-11-09', t) % C.mots.length) + C.mots.length) % C.mots.length];
   const plan = S.plan[t] || {};
   const prises = todayPrises();
   const done = prises.filter(p => (S.taken[t] || {})[p.id]).length;
