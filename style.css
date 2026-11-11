@@ -115,3 +115,16 @@ ol.steps li{margin:8px 0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field label{display:block;font-size:12px;color:var(--txt2);margin:0 0 4px 4px}
 .unit{position:relative}.unit span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--taupe);font-size:14px}
+
+/* Touche vert sauge */
+:root{--sauge:#8C9B7E;--sauge-f:#6E7D61;--sauge-c:#E6EADF}
+.progress i{background:var(--sauge)}
+.check.on .box{background:var(--sauge);border-color:var(--sauge)}
+.cal .d.ok{background:var(--sauge)}
+.cal .d.part{border-color:var(--sauge)}
+.dots button.on{background:var(--sauge);border-color:var(--sauge)}
+.toggle.on{background:var(--sauge)}
+.note{background:var(--sauge-c);border-left-color:var(--sauge-f)}
+.pill{background:var(--sauge-c);border-color:var(--sauge-c);color:var(--sauge-f)}
+.alert{background:var(--sauge-f)}
+.pgrid .card.on{border-color:var(--sauge)}.pgrid .tick{background:var(--sauge)}
