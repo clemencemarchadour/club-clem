@@ -119,6 +119,9 @@ function loginView(step = 'email', email = '', forced = false) {
       <p class="small">Entre ci-dessous le code à 6 chiffres qu'il contient.</p>
       <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="200" placeholder="······">
       <button class="btn full mt" id="verify">Entrer dans le Club</button>
+      <details class="mt"><summary class="small" style="cursor:pointer;color:var(--txt2);text-decoration:underline">Je n'ai pas reçu de code</summary>
+      <div class="small" style="margin-top:8px;line-height:1.5">Le code arrive en général en moins d'une minute, de la part de <b>Le Club Clem</b> (leclubclem@gmail.com).<br>• Regarde dans tes <b>courriers indésirables</b> ou <b>spams</b>, et dans l'onglet <b>Autres</b> si tu es sur Hotmail ou Outlook.<br>• Ajoute leclubclem@gmail.com à tes contacts, puis redemande un code.<br>• Toujours rien ? Écris-moi sur Instagram, <b>@clemence.marchadour</b>, je t'aide.</div>
+      <button class="btn ghost full mt" id="resend" disabled>Renvoyer un code</button></details>
       <p class="center mt"><button class="link" id="again">Changer d'adresse</button></p>`}
       <p class="small" id="err" style="color:#9b2c2c"></p>
     </div>
@@ -134,7 +137,10 @@ function loginView(step = 'email', email = '', forced = false) {
       localStorage.setItem('cc_email', em); loginView('code', em);
     };
   } else {
-    $('#again').onclick = () => loginView('email', email);
+    $('#again').onclick = () => loginView('email', email, true);
+    let wait = 60; const rb = $('#resend');
+    const tickR = setInterval(() => { if (!document.body.contains(rb)) { clearInterval(tickR); return; } wait--; rb.textContent = wait > 0 ? `Renvoyer un code (${wait} s)` : 'Renvoyer un code'; rb.disabled = wait > 0; if (wait <= 0) clearInterval(tickR); }, 1000);
+    rb.onclick = async () => { rb.disabled = true; const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }); if (error) { $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Patiente encore un peu avant de redemander un code." : "L'envoi n'a pas marché : " + error.message; rb.disabled = false; return; } toast('Nouveau code envoyé'); loginView('code', email); };
     $('#verify').onclick = async () => {
       const raw = $('#code').value.trim();
       let res;
