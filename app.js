@@ -39,7 +39,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -215,6 +215,7 @@ function render() {
   app.innerHTML = `<div class="wrap">${v()}</div>${full ? '' : nav()}`;
   document.body.classList.toggle('nonav', full);
   bind();
+  setTimeout(checkBadges, 400);
 }
 function bind() {
   app.querySelectorAll('[data-go]').forEach(b => b.onclick = e => { e.stopPropagation(); const [t, s, a] = b.dataset.go.split('|'); go(t, s || null, a || null); });
@@ -224,6 +225,52 @@ const prenom = () => (ME && ME.prenom) || '';
 const avatarInner = () => S.photo ? `<img src="${S.photo}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : esc((prenom() || 'C').charAt(0).toUpperCase());
 function headBlock() {
   return `<div class="top"><span style="width:40px"></span><div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div><button class="avatar" data-go="profil||" style="padding:0;overflow:hidden">${avatarInner()}</button></div>`;
+}
+
+/* ---------- badges ---------- */
+const BADGES = [
+  [1, 'Premier pas', "Tu as fait le premier pas, et c'est souvent le plus dur. Je suis fière de toi.", 1, '1', 'jour'],
+  [2, "C'est parti", "Deux jours où tu t'es choisie. On continue ensemble.", 1, '2', 'jours'],
+  [3, 'Trois jours pour toi', 'Trois jours rien que pour toi. Tu mérites ce temps-là.', 1, '3', 'jours'],
+  [4, 'Tu prends le pli', 'Ton corps commence à reconnaître ce nouveau rythme. Garde le cap, en douceur.', 1, '4', 'jours'],
+  [5, 'Cinq jours, bravo', "Pas besoin d'être parfaite, juste présente. Et tu l'es.", 1, '5', 'jours'],
+  [6, 'Presque une semaine', "Encore un jour et tu boucles ta première semaine. Je t'attends demain.", 1, '6', 'jours'],
+  [7, 'Ta première semaine', "Une semaine entière à prendre soin de toi. Savoure, tu l'as méritée.", 1, '7', 'jours'],
+  [14, 'Deux semaines', 'Ce qui te demandait un effort devient peu à peu naturel.', 2, '14', 'jours'],
+  [21, 'Ton habitude est ancrée', 'Vingt et un jours de petits gestes. Ils font maintenant partie de toi.', 2, '21', 'jours'],
+  [30, 'Ton premier mois', 'Regarde le chemin parcouru, et sois fière de chaque pas.', 2, '1', 'mois'],
+  [60, 'Deux mois', "Tu n'as plus besoin de te motiver : c'est devenu ton rythme.", 3, '2', 'mois'],
+  [90, 'Un rituel complet', "Trois mois de constance. C'est là que tout s'installe vraiment.", 3, '3', 'mois'],
+  [180, 'Six mois', "Tu as construit quelque chose de solide, et ça, personne ne te l'enlève.", 3, '6', 'mois'],
+  [365, 'Un an', "Merci de ta confiance, du fond du cœur. Ce chemin, c'est toi qui l'as tracé. 🤎", 3, '1', 'an']];
+function activeDays() {
+  const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(L.journal || {})]);
+  let n = 0;
+  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || Object.values(S.plan[x] || {}).some(Boolean) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
+  return n;
+}
+const medal = (b, cls = '') => `<div class="med t${b[3]} ${cls}"><b>${b[4]}</b><span>${b[5]}</span></div>`;
+let badgeShown = false;
+function checkBadges() {
+  if (!S || !L || badgeShown) return;
+  S.badges = S.badges || {};
+  const n = activeDays(), news = BADGES.filter(b => n >= b[0] && !S.badges[b[0]]);
+  if (!news.length) return;
+  news.forEach(b => S.badges[b[0]] = today()); save();
+  const b = news[news.length - 1], nx = BADGES.find(x => x[0] > b[0]);
+  badgeShown = true;
+  const o = document.createElement('div'); o.className = 'bmodal';
+  o.innerHTML = `<div class="bbox"><span class="lab" style="color:var(--sauge-f)">Nouveau badge</span><div class="bd big">${medal(b)}</div>
+  <h2 class="serif" style="font-size:30px;margin:22px 0 0">${esc(b[1])}</h2><p class="bmot">« ${esc(b[2])} »</p><p class="lab" style="margin:10px 0 24px">Clem 🤎</p>
+  <button class="btn full" id="bok">Merci Clem</button>${nx ? `<p class="small muted" style="margin-top:14px">Prochain badge à ton ${nx[0] < 30 ? nx[0] + 'e jour actif' : nx[0] === 30 ? '1er mois' : nx[4] + (nx[5] === 'an' ? ' an' : ' mois')}</p>` : ''}</div>`;
+  document.body.appendChild(o);
+  o.querySelector('#bok').onclick = () => { o.remove(); badgeShown = false; };
+}
+function badgesBlock() {
+  const got = S.badges || {}, n = BADGES.filter(b => got[b[0]]).length;
+  const grp = (l, t) => `<p class="lab mt2">${l}</p><div class="bgrid">${BADGES.filter(b => b[3] === t).map(b => `<div class="bd">${medal(b, got[b[0]] ? '' : 'off')}<div class="nm">${esc(b[1])}</div></div>`).join('')}</div>`;
+  return `<div class="row between mt2"><h3>Mes badges</h3><span class="small muted">${n} sur ${BADGES.length}</span></div>
+  ${grp('Ta première semaine', 1)}${grp('Ton premier mois', 2)}${grp('Et ensuite', 3)}`;
 }
 
 /* ---------- Ma journée ---------- */
@@ -586,8 +633,9 @@ function vProfil() {
   return `${back('Ma journée', 'journee')}
   <div class="center"><label style="cursor:pointer;display:inline-block"><div class="avatar" style="width:88px;height:88px;font-size:36px;margin:0 auto;overflow:hidden">${avatarInner()}</div><input type="file" accept="image/*" id="photo" style="display:none"><div class="small muted mt" style="text-decoration:underline">${S.photo ? 'Changer ma photo' : 'Ajouter ma photo'}</div></label>
   ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
-  <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Régularité</span><div class="serif" style="font-size:26px">${streak()} j</div></div><div class="card" style="margin:0"><span class="lab">Favorites</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
-  <a class="card tap row" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
+  <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Jours actifs</span><div class="serif" style="font-size:26px">${activeDays()}</div></div><div class="card" style="margin:0"><span class="lab">Favorites</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
+  ${badgesBlock()}
+  <a class="card tap row mt2" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
   ${installHint()}
   <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Ton journal et tes mesures restent sur ton téléphone. Tes favoris, ta semaine et ton rituel sont sauvegardés de façon privée sur ton compte.</p></div>

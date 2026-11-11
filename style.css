@@ -142,3 +142,25 @@ ol.steps li{margin:8px 0}
 .macros div b,.macros div span{color:var(--ivoire)}
 .macros div:first-child{background:var(--sauge);border-color:var(--sauge)}
 .macros div:first-child b,.macros div:first-child span{color:#fff}
+
+.bd{display:flex;flex-direction:column;align-items:center;text-align:center}
+.med{width:88px;height:88px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.med b{font-family:Gloock,serif;font-weight:400;font-size:32px;line-height:1}
+.med span{font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-top:3px;font-weight:500}
+.med.t1{background:var(--sauge-c);box-shadow:inset 0 0 0 3px var(--sauge),inset 0 0 0 7px var(--sauge-c),inset 0 0 0 8px var(--sauge)}
+.med.t1 b,.med.t1 span{color:var(--sauge-f)}
+.med.t2{background:var(--ivoire);box-shadow:inset 0 0 0 3px var(--or),inset 0 0 0 7px var(--ivoire),inset 0 0 0 8px var(--or)}
+.med.t2 b{color:var(--brun)}.med.t2 span{color:var(--or)}
+.med.t3{background:var(--brun);box-shadow:inset 0 0 0 3px var(--or),inset 0 0 0 7px var(--brun),inset 0 0 0 8px var(--or)}
+.med.t3 b{color:var(--ivoire)}.med.t3 span{color:var(--or)}
+.med.off{background:transparent;box-shadow:inset 0 0 0 1.5px var(--filet)}
+.med.off b,.med.off span{color:#cbbfae}
+.nm{font-size:12px;margin-top:8px;line-height:1.25;max-width:100px}
+.med.off+.nm{color:#b5a896}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px;margin-top:12px}
+.big .med{width:150px;height:150px}.big .med b{font-size:58px}.big .med span{font-size:12px}
+.big{margin-top:20px}
+.bmodal{position:fixed;inset:0;background:rgba(59,35,20,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100;animation:bf .3s}
+.bbox{background:var(--ivoire);border-radius:26px;padding:34px 24px 26px;text-align:center;max-width:380px;width:100%;animation:bp .45s cubic-bezier(.2,1.4,.4,1)}
+.bmot{font-family:Gloock,serif;font-size:20px;line-height:1.3;margin:16px 0 6px}
+@keyframes bf{from{opacity:0}}@keyframes bp{from{transform:scale(.8);opacity:0}}
