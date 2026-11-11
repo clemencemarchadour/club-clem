@@ -83,12 +83,12 @@ function loginView(step = 'email', email = '') {
     <div class="card mt2">
     ${step === 'email' ? `
       <h3>Bienvenue</h3>
-      <p class="muted small">Entre l'adresse e-mail que tu utilises pour tes commandes chez Clem. Tu vas recevoir un code de connexion.</p>
+      <p class="muted small">Entre l'adresse e-mail que tu utilises pour tes commandes chez Clem. Tu vas recevoir un e-mail pour te connecter.</p>
       <input id="em" type="email" autocomplete="email" inputmode="email" placeholder="ton@email.fr" value="${esc(email)}">
-      <button class="btn full mt" id="send">Recevoir mon code</button>`
+      <button class="btn full mt" id="send">Recevoir mon e-mail de connexion</button>`
       : `
       <h3>Ton code</h3>
-      <p class="muted small">Un code vient d'être envoyé à <b>${esc(email)}</b>. Pense à regarder dans tes spams.</p>
+      <p class="muted small">Un e-mail vient d'être envoyé à <b>${esc(email)}</b> (pense à regarder dans tes spams). Appuie sur le lien qu'il contient, ou entre ici le code s'il y en a un.</p>
       <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="······">
       <button class="btn full mt" id="verify">Entrer dans le Club</button>
       <p class="center mt"><button class="link" id="again">Changer d'adresse</button></p>`}
@@ -102,7 +102,7 @@ function loginView(step = 'email', email = '') {
       if (!/^\S+@\S+\.\S+$/.test(em)) { $('#err').textContent = "Cette adresse ne semble pas valide."; return; }
       $('#send').disabled = true; $('#send').textContent = 'Envoi…';
       const { error } = await sb.auth.signInWithOtp({ email: em, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname } });
-      if (error) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon code'; $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Trop de demandes d'un coup. Réessaie dans quelques minutes." : "L'envoi n'a pas marché : " + error.message; return; }
+      if (error) { $('#send').disabled = false; $('#send').textContent = 'Recevoir mon e-mail de connexion'; $('#err').textContent = /rate|limit|seconds/i.test(error.message) ? "Trop de demandes d'un coup. Réessaie dans quelques minutes." : "L'envoi n'a pas marché : " + error.message; return; }
       localStorage.setItem('cc_email', em); loginView('code', em);
     };
   } else {
