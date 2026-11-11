@@ -324,7 +324,7 @@ function vJournee() {
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
     ${activeCard()}
   </div>
-  <div class="card tap" data-act="sucre"><span class="lab">Envie de sucré ?</span><h3 class="mt">Mes alternatives gourmandes</h3><p class="small muted" style="margin:4px 0 0">Les douceurs du Club, sans tout lâcher.</p></div>`;
+  <div class="card tap" data-act="sucre"><span class="lab">Un petit creux ?</span><h3 class="mt">Mes en-cas salés et sucrés</h3><p class="small muted" style="margin:4px 0 0">De quoi tenir jusqu'au prochain repas, sans culpabiliser.</p></div>`;
 }
 const GLASS = on => `<svg viewBox="0 0 24 30" width="26" height="32"><path d="M3 3h18l-2.2 23.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z" fill="${on ? 'var(--sauge-c)' : 'none'}" stroke="${on ? 'var(--sauge)' : 'var(--filet)'}" stroke-width="1.6" stroke-linejoin="round"/>${on ? '<path d="M5.2 11h13.6l-1.5 15.2a1.2 1.2 0 0 1-1.2 1H7.9a1.2 1.2 0 0 1-1.2-1z" fill="var(--sauge)"/>' : ''}</svg>`;
 function waterCard(t) {
@@ -368,10 +368,10 @@ function filtered() {
   const f = ui.filter;
   const all = C.recipes.concat(S.own.map(r => Object.assign({ mine: true }, r)));
   return all.filter(r => f === 'all' || (f === 'sucre' && r.type === 'pdj' && r.cat === 'sucre') || (f === 'sale' && r.type === 'pdj' && r.cat === 'sale')
-    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'dessert' && r.cat === 'dessert') || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine));
+    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && (r.cat === 'encas' || r.cat === 'dessert')) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine));
 }
 function vRecettes() {
-  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['dessert', 'Desserts'], ['favs', 'Favorites'], ['mine', 'Mes recettes']];
+  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas et desserts'], ['favs', 'Favorites'], ['mine', 'Mes recettes']];
   const list = filtered();
   return `<div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="rlist">${list.map(rCard).join('') || '<p class="muted center mt2">Rien ici pour l\'instant.</p>'}</div>
@@ -701,7 +701,7 @@ function vProfil() {
 const ACT = {
   take: v => { const t = today(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
   tableSemaine: () => { ui.tableSeg = 'semaine'; ui.day = today(); go('table'); },
-  sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'dessert'; go('table'); },
+  sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
   pick: v => { const [d, s] = v.split('|'); pickSheet(d, s); },
   unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
