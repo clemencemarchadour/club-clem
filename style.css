@@ -136,3 +136,5 @@ ol.steps li{margin:8px 0}
 .day.on.has::after{background:var(--sauge-c)}
 .day.on{background:var(--sauge-f);border-color:var(--sauge-f);color:#fff}
 .day.on.has::after{background:#fff}
+.macros b{color:var(--brun)}
+.macros span{color:var(--sauge-f)}
