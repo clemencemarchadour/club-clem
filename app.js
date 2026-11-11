@@ -273,6 +273,19 @@ function checkBadges() {
   document.body.appendChild(o);
   o.querySelector('#bok').onclick = () => { o.remove(); badgeShown = false; };
 }
+const lastBadge = () => { const g = S.badges || {}; return BADGES.filter(b => g[b[0]]).pop(); };
+const nextBadge = () => { const g = S.badges || {}; return BADGES.find(b => !g[b[0]]); };
+const mini = (b, sz, off) => `<div class="med t${b[3]} ${off ? 'off' : ''}" style="width:${sz}px;height:${sz}px;flex:none"><b style="font-size:${Math.round(sz * .38)}px">${b[4]}</b><span style="font-size:${Math.max(6, Math.round(sz * .1))}px;margin-top:1px">${b[5]}</span></div>`;
+function nextBadgeCard() {
+  const nx = nextBadge(); if (!nx) return '';
+  const n = activeDays(), left = Math.max(1, nx[0] - n), pc = Math.min(100, Math.max(4, n / nx[0] * 100));
+  return `<div class="card tap" data-go="profil||"><div class="row between"><span class="lab">Mon prochain badge</span><span class="small muted">${n} / ${nx[0]} jours actifs</span></div>
+  <div class="row mt" style="gap:14px">${mini(nx, 52, true)}<div class="grow"><div class="serif" style="font-size:19px">Encore ${left} jour${left > 1 ? 's' : ''} actif${left > 1 ? 's' : ''}</div><div class="progress" style="margin-top:8px"><i style="width:${pc}%"></i></div></div></div></div>`;
+}
+function activeCard() {
+  const b = lastBadge(), n = activeDays();
+  return `<div class="card tap" data-go="profil||" style="margin:0"><div class="row between" style="align-items:flex-start"><span class="lab">Jours actifs</span>${b ? mini(b, 34) : ''}</div><div class="serif" style="font-size:28px;margin-top:6px">${n} jour${n > 1 ? 's' : ''}</div><div class="small muted">${b ? 'dernier badge : ' + esc(b[1]) : 'ton premier badge t’attend'}</div></div>`;
+}
 function badgesBlock() {
   const got = S.badges || {}, n = BADGES.filter(b => got[b[0]]).length;
   const grp = (l, t) => `<p class="lab mt2">${l}</p><div class="bgrid">${BADGES.filter(b => b[3] === t).map(b => `<div class="bd">${medal(b, got[b[0]] ? '' : 'off')}<div class="nm">${esc(b[1])}</div></div>`).join('')}</div>`;
@@ -295,12 +308,12 @@ function vJournee() {
   const plan = S.plan[t] || {};
   const prises = todayPrises();
   const done = prises.filter(p => (S.taken[t] || {})[p.id]).length;
-  const st = streak();
   return `${headBlock()}
   <div class="card"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
     <h2 class="mt">Bonjour${prenom() ? ' ' + esc(prenom()) : ''}</h2>
     <p class="muted" style="margin:8px 0 0">${esc(mot)}</p>
     <p class="lab mt" style="text-align:right">Le mot de Clem</p></div>
+  ${nextBadgeCard()}
   <div class="card tap" data-go="rituel||"><div class="row between"><span class="lab">Mon rituel</span><span class="pill">${prises.length ? done + ' / ' + prises.length : 'à configurer'}</span></div>
     ${prises.length ? prises.slice(0, 4).map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
@@ -308,7 +321,7 @@ function vJournee() {
     ${SLOTS.map(([k, l]) => slotRow(t, k, l)).join('')}</div>
   <div class="grid2">
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
-    <div class="card" style="margin:0"><span class="lab">Régularité</span><div class="serif" style="font-size:28px;margin-top:6px">${st} jour${st > 1 ? 's' : ''}</div><div class="small muted">${st > 1 ? "d'affilée, bravo" : 'on commence aujourd’hui'}</div></div>
+    ${activeCard()}
   </div>
   <div class="card tap" data-act="sucre"><span class="lab">Envie de sucré ?</span><h3 class="mt">Mes alternatives gourmandes</h3><p class="small muted" style="margin:4px 0 0">Les douceurs du Club, sans tout lâcher.</p></div>`;
 }
