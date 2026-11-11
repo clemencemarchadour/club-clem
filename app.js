@@ -88,8 +88,9 @@ function loginView(step = 'email', email = '') {
       <button class="btn full mt" id="send">Recevoir mon e-mail de connexion</button>`
       : `
       <h3>Ton code</h3>
-      <p class="muted small">Un e-mail vient d'être envoyé à <b>${esc(email)}</b> (pense à regarder dans tes spams). Appuie sur le lien qu'il contient, ou entre ici le code s'il y en a un.</p>
-      <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="······">
+      <p class="muted small">Un e-mail vient d'être envoyé à <b>${esc(email)}</b> (pense à regarder dans tes spams).</p>
+      <p class="small"><b>N'appuie pas sur le lien.</b> Fais un appui long dessus, choisis <b>Copier le lien</b>, puis colle-le ci-dessous.</p>
+      <input id="code" autocomplete="one-time-code" placeholder="Colle le lien ici">
       <button class="btn full mt" id="verify">Entrer dans le Club</button>
       <p class="center mt"><button class="link" id="again">Changer d'adresse</button></p>`}
       <p class="small" id="err" style="color:#9b2c2c"></p>
@@ -108,11 +109,21 @@ function loginView(step = 'email', email = '') {
   } else {
     $('#again').onclick = () => loginView('email', email);
     $('#verify').onclick = async () => {
-      const token = $('#code').value.replace(/\D/g, '');
-      if (token.length < 6) { $('#err').textContent = 'Le code fait 6 chiffres ou plus.'; return; }
-      $('#verify').disabled = true;
-      const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-      if (error) { $('#verify').disabled = false; $('#err').textContent = 'Ce code ne fonctionne pas ou a expiré. Redemande un code.'; return; }
+      const raw = $('#code').value.trim();
+      let res;
+      const m = raw.match(/[?&]token=([^&\s]+)/);
+      if (m) {
+        const ty = (raw.match(/[?&]type=([a-z_]+)/) || [])[1] || 'magiclink';
+        $('#verify').disabled = true;
+        res = await sb.auth.verifyOtp({ token_hash: decodeURIComponent(m[1]), type: ty === 'signup' ? 'signup' : ty === 'invite' ? 'invite' : 'magiclink' });
+      } else {
+        const token = raw.replace(/\D/g, '');
+        if (token.length < 6) { $('#err').textContent = 'Colle le lien reçu par e-mail, ou entre le code.'; return; }
+        $('#verify').disabled = true;
+        res = await sb.auth.verifyOtp({ email, token, type: 'email' });
+      }
+      const { error } = res;
+      if (error) { $('#verify').disabled = false; $('#err').textContent = 'Ce lien ne fonctionne pas ou a expiré. Redemande un e-mail.'; return; }
       boot();
     };
   }
