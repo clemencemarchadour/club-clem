@@ -18,7 +18,7 @@ const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 's
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const SPORTS = ['Marche', 'Course', 'Vélo', 'Natation', 'Yoga', 'Pilates', 'Renfo / salle', 'Danse', 'Cours collectif', 'Autre'];
 const LEVELS = { debute: ['Je débute', 30, 30], reprends: ['Je reprends', 40, 20], aise: ["Je suis à l'aise", 45, 15] };
-const SLOTS = [['b', 'Petit-déj'], ['l', 'Midi'], ['d', 'Soir']];
+const SLOTS = [['b', 'Petit-déj'], ['l', 'Midi'], ['s', 'En-cas'], ['d', 'Soir']];
 const MOMENTS = [['matin', 'Le matin'], ['repas', 'Avant ton plus gros repas'], ['soir', 'Au dîner'], ['coucher', 'Au coucher']];
 
 let C = null;          // contenu
@@ -39,7 +39,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -251,9 +251,9 @@ const BADGES = [
   [330, 'Onze mois', 'Ta première année est toute proche. Je suis là, jusqu’au bout.', 3, '11', 'mois'],
   [365, 'Un an', "Merci de ta confiance, du fond du cœur. Ce chemin, c'est toi qui l'as tracé. 🤎", 3, '1', 'an']];
 function activeDays() {
-  const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(L.journal || {})]);
+  const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(S.water || {}), ...Object.keys(L.journal || {})]);
   let n = 0;
-  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || Object.values(S.plan[x] || {}).some(Boolean) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
+  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || Object.values(S.plan[x] || {}).some(Boolean) || (S.water && S.water[x]) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
   return n;
 }
 const medal = (b, cls = '') => `<div class="med t${b[3]} ${cls}"><b>${b[4]}</b><span>${b[5]}</span></div>`;
@@ -319,11 +319,19 @@ function vJournee() {
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
   <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
     ${SLOTS.map(([k, l]) => slotRow(t, k, l)).join('')}</div>
+  ${waterCard(t)}
   <div class="grid2">
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
     ${activeCard()}
   </div>
   <div class="card tap" data-act="sucre"><span class="lab">Envie de sucré ?</span><h3 class="mt">Mes alternatives gourmandes</h3><p class="small muted" style="margin:4px 0 0">Les douceurs du Club, sans tout lâcher.</p></div>`;
+}
+const GLASS = on => `<svg viewBox="0 0 24 30" width="26" height="32"><path d="M3 3h18l-2.2 23.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z" fill="${on ? 'var(--sauge-c)' : 'none'}" stroke="${on ? 'var(--sauge)' : 'var(--filet)'}" stroke-width="1.6" stroke-linejoin="round"/>${on ? '<path d="M5.2 11h13.6l-1.5 15.2a1.2 1.2 0 0 1-1.2 1H7.9a1.2 1.2 0 0 1-1.2-1z" fill="var(--sauge)"/>' : ''}</svg>`;
+function waterCard(t) {
+  const n = (S.water && S.water[t]) || 0, goal = 8;
+  return `<div class="card"><div class="row between"><span class="lab">Mes verres d'eau</span><span class="small muted">${n} / ${goal}${n >= goal ? ' 🤎' : ''}</span></div>
+  <div class="row between mt" style="gap:2px">${Array.from({ length: goal }, (_, i) => `<button data-act="water" data-v="${i + 1}" aria-label="Verre ${i + 1}" style="background:none;border:0;padding:4px;cursor:pointer">${GLASS(i < n)}</button>`).join('')}</div>
+  <p class="small muted" style="margin:8px 0 0">${n >= goal ? 'Objectif atteint, bravo !' : n ? 'Touche un verre à chaque fois que tu bois.' : 'Un grand verre au réveil, et c\'est parti.'}</p></div>`;
 }
 function slotRow(day, k, l) {
   const id = (S.plan[day] || {})[k], r = id && R(id);
@@ -454,7 +462,8 @@ function vCourses() {
     + '<button class="btn soft full" data-act="clearCourses">Tout décocher</button>';
 }
 function pickSheet(day, slot) {
-  const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? (r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat)) : (r.type !== 'pdj' && !['sucre', 'sale'].includes(r.cat)));
+  const isB = r => r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
+  const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
   const el = sheet(`<div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="heart" data-x>×</button></div>
     <button class="btn ghost full" data-own>+ Ajouter ma propre recette</button>
     <p class="small muted mt">Ou choisis parmi les idées de Clem :</p>
@@ -700,7 +709,7 @@ const ACT = {
   addDay: v => {
     const r = R(v), t = today(), p = S.plan[t] = S.plan[t] || {};
     const breakfast = r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
-    const slot = breakfast ? 'b' : (!p.l ? 'l' : 'd');
+    const slot = r.cat === 'dessert' || r.cat === 'encas' ? 's' : breakfast ? 'b' : (!p.l ? 'l' : 'd');
     p[slot] = v; save(); toast('Ajouté : ' + SLOTS.find(s => s[0] === slot)[1].toLowerCase() + " d'aujourd'hui");
   },
   addCourses: v => { if (!S.extra.includes(v)) S.extra.push(v); save(); toast('Ajouté à tes courses'); },
@@ -724,6 +733,7 @@ const ACT = {
   rmRow: v => { keepDraft(); ui.draft.rows.splice(+v, 1); if (!ui.draft.rows.length) ui.draft.rows.push({ f: '', g: '', u: '' }); render(); },
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
+  water: v => { const t = today(); S.water = S.water || {}; const n = S.water[t] || 0; S.water[t] = +v === n ? n - 1 : +v; save(); render(); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
