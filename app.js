@@ -328,10 +328,12 @@ function vJournee() {
 }
 const GLASS = on => `<svg viewBox="0 0 24 30" width="26" height="32"><path d="M3 3h18l-2.2 23.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z" fill="${on ? 'var(--sauge-c)' : 'none'}" stroke="${on ? 'var(--sauge)' : 'var(--filet)'}" stroke-width="1.6" stroke-linejoin="round"/>${on ? '<path d="M5.2 11h13.6l-1.5 15.2a1.2 1.2 0 0 1-1.2 1H7.9a1.2 1.2 0 0 1-1.2-1z" fill="var(--sauge)"/>' : ''}</svg>`;
 function waterCard(t) {
-  const n = (S.water && S.water[t]) || 0, goal = 8;
-  return `<div class="card"><div class="row between"><span class="lab">Mes verres d'eau</span><span class="small muted">${n} / ${goal}${n >= goal ? ' 🤎' : ''}</span></div>
+  const n = (S.water && S.water[t]) || 0, cl = 25, goal = 8, min = 150, tot = n * cl;
+  const L = x => (x / 100).toFixed(2).replace(/0$/, '').replace('.', ',') + ' L';
+  return `<div class="card"><div class="row between"><span class="lab">Mes verres d'eau</span><span class="serif" style="font-size:22px">${L(tot)}</span></div>
   <div class="row between mt" style="gap:2px">${Array.from({ length: goal }, (_, i) => `<button data-act="water" data-v="${i + 1}" aria-label="Verre ${i + 1}" style="background:none;border:0;padding:4px;cursor:pointer">${GLASS(i < n)}</button>`).join('')}</div>
-  <p class="small muted" style="margin:8px 0 0">${n >= goal ? 'Objectif atteint, bravo !' : n ? 'Touche un verre à chaque fois que tu bois.' : 'Un grand verre au réveil, et c\'est parti.'}</p></div>`;
+  <div style="position:relative;margin-top:10px"><div class="progress" style="margin:0"><i style="width:${Math.min(100, tot / (goal * cl) * 100)}%"></i></div><span style="position:absolute;left:${min / (goal * cl) * 100}%;top:-4px;width:2px;height:14px;background:var(--brun);border-radius:2px"></span></div>
+  <div class="row between small muted" style="margin-top:6px"><span>1 verre = 25 cl</span><span>${tot >= goal * cl ? '2 L, bravo 🤎' : tot >= min ? '1,5 L atteint, bravo !' : 'Minimum : 1,5 L'}</span></div></div>`;
 }
 function slotRow(day, k, l) {
   const id = (S.plan[day] || {})[k], r = id && R(id);
