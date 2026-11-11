@@ -241,7 +241,14 @@ const BADGES = [
   [30, 'Ton premier mois', 'Regarde le chemin parcouru, et sois fière de chaque pas.', 2, '1', 'mois'],
   [60, 'Deux mois', "Tu n'as plus besoin de te motiver : c'est devenu ton rythme.", 3, '2', 'mois'],
   [90, 'Un rituel complet', "Trois mois de constance. C'est là que tout s'installe vraiment.", 3, '3', 'mois'],
+  [120, 'Quatre mois', "Ce n'est plus un essai, c'est ta nouvelle façon de prendre soin de toi.", 3, '4', 'mois'],
+  [150, 'Cinq mois', "Des petits gestes répétés, encore et encore. C'est comme ça que les grandes choses se construisent.", 3, '5', 'mois'],
   [180, 'Six mois', "Tu as construit quelque chose de solide, et ça, personne ne te l'enlève.", 3, '6', 'mois'],
+  [210, 'Sept mois', 'Prends une seconde aujourd’hui pour te remercier, toi.', 3, '7', 'mois'],
+  [240, 'Huit mois', "Même les jours plus calmes, tu es restée. C'est ça, la vraie constance.", 3, '8', 'mois'],
+  [270, 'Neuf mois', "Tu n'as rien lâché, et tu peux en être fière.", 3, '9', 'mois'],
+  [300, 'Dix mois', 'Ce que tu as construit t’appartient. Continue à te choisir.', 3, '10', 'mois'],
+  [330, 'Onze mois', 'Ta première année est toute proche. Je suis là, jusqu’au bout.', 3, '11', 'mois'],
   [365, 'Un an', "Merci de ta confiance, du fond du cœur. Ce chemin, c'est toi qui l'as tracé. 🤎", 3, '1', 'an']];
 function activeDays() {
   const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(L.journal || {})]);
@@ -633,7 +640,7 @@ function vProfil() {
   return `${back('Ma journée', 'journee')}
   <div class="center"><label style="cursor:pointer;display:inline-block"><div class="avatar" style="width:88px;height:88px;font-size:36px;margin:0 auto;overflow:hidden">${avatarInner()}</div><input type="file" accept="image/*" id="photo" style="display:none"><div class="small muted mt" style="text-decoration:underline">${S.photo ? 'Changer ma photo' : 'Ajouter ma photo'}</div></label>
   ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
-  <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Jours actifs</span><div class="serif" style="font-size:26px">${activeDays()}</div></div><div class="card" style="margin:0"><span class="lab">Favorites</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
+  <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Jours actifs</span><div class="serif" style="font-size:26px">${activeDays()}</div></div><div class="card" style="margin:0"><span class="lab">Recettes préférées</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
   ${badgesBlock()}
   <a class="card tap row mt2" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
