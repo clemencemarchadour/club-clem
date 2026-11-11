@@ -520,16 +520,19 @@ function chart() {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;margin-top:10px">${[1, 3, 5].map(v => `<line x1="10" x2="${W - 10}" y1="${y(v)}" y2="${y(v)}" stroke="#E2D6C3"/>`).join('')}${line('e', '#3B2314')}${line('s', '#B08D57', 1)}</svg>
   <div class="row small muted" style="gap:16px"><span>━ Énergie</span><span style="color:#B08D57">┅ Sommeil</span></div>`;
 }
+const SIL = `<svg width="140" height="262" viewBox="0 0 140 262" role="img" aria-label="Dessin d'une silhouette de femme indiquant où prendre le tour de taille, de hanches et de cuisse" style="flex-shrink: 0"> <path d="M63 18 C60 26 61 36 66 41 C68.5 43.6 72 43.6 75 41 C80 36 81 26 78 18 C75 12.6 66 12.6 63 18 Z" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M65.5 48 C58 50 49 51 46 56 C42 64 41 78 40 92 C39 104 38 116 37 126 C36 130 34.5 136 36.5 139.5 C38.5 141.5 41 138 41.2 133.5 C41.8 130 43 128 43.2 124 C45 112 46.5 98 48 84 C49 77 49.6 71 50 66" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M 74.5 48 C 82 50 91 51 94 56 C 98 64 99 78 100 92 C 101 104 102 116 103 126 C 104 130 105.5 136 103.5 139.5 C 101.5 141.5 99 138 98.8 133.5 C 98.2 130 97 128 96.8 124 C 95 112 93.5 98 92 84 C 91 77 90.4 71 90 66" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M50 66 C52 76 55.5 84 55 92 C53 100 46.5 108 45.5 118 C44.5 134 46.5 150 48.5 166 C50 186 51.5 210 52.5 228 C53 236 53 242 53 246 C52.5 250 50.5 253.5 53 255.5 L61 255.5 C62 252 62.2 248 62 244 C62.5 222 64 190 66 160 C67 146 68 136 70 129" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M 90 66 C 88 76 84.5 84 85 92 C 87 100 93.5 108 94.5 118 C 95.5 134 93.5 150 91.5 166 C 90 186 88.5 210 87.5 228 C 87 236 87 242 87 246 C 87.5 250 89.5 253.5 87 255.5 L 79 255.5 C 78 252 77.8 248 78 244 C 77.5 222 76 190 74 160 C 73 146 72 136 70 129" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M61 11 C53 21 52.5 40 54.5 50 C55.5 56 53.5 61 50.5 65" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M 79 11 C 87 21 87.5 40 85.5 50 C 84.5 56 86.5 61 89.5 65" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M61 11 C66 3.5 75 3 79 11" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M66.5 42 L65.5 48 M74 42 L74.5 48" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M53.5 69 C57 76 64 76.5 68 71 M72 71 C76 76.5 83 76 86.5 69" fill="none" stroke="#6F5F4F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/> <path d="M44 92 H96" stroke="#3B2314" stroke-width="1.3" stroke-dasharray="3 3"/> <path d="M34 118 H106" stroke="#3B2314" stroke-width="1.3" stroke-dasharray="3 3"/> <path d="M38 148 H70" stroke="#3B2314" stroke-width="1.3" stroke-dasharray="3 3"/> <circle cx="112" cy="92" r="9" fill="#3B2314"/><text x="112" y="96" text-anchor="middle" font-family="Jost, sans-serif" font-size="11" fill="#FCFAF2">1</text> <circle cx="120" cy="118" r="9" fill="#3B2314"/><text x="120" y="122" text-anchor="middle" font-family="Jost, sans-serif" font-size="11" fill="#FCFAF2">2</text> <circle cx="26" cy="148" r="9" fill="#3B2314"/><text x="26" y="152" text-anchor="middle" font-family="Jost, sans-serif" font-size="11" fill="#FCFAF2">3</text> </svg>`;
 function vGuide() {
-  return `${back('Mon journal', 'journal')}<h2>Prendre mes mensurations</h2>
-  <div class="card"><ul class="clean">
-  <li><b>Tour de taille</b> : au niveau le plus fin du ventre, en général juste au-dessus du nombril.</li>
-  <li><b>Tour de hanches</b> : à l'endroit le plus large des fesses, pieds joints.</li>
-  <li><b>Tour de cuisse</b> : au plus large de la cuisse, juste sous la fesse.</li></ul></div>
+  const step = (n, t, d) => `<div class="row" style="align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--filet)"><span style="width:26px;height:26px;border-radius:50%;background:var(--brun);color:var(--ivoire);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">${n}</span><div><b>${t}</b><div class="small muted">${d}</div></div></div>`;
+  return `${back('Mon journal', 'journal')}<h2>Bien prendre mes mensurations</h2>
+  <div class="card"><div class="center">${SIL}</div>
+  ${step(1, 'Tour de taille', "À l'endroit le plus fin, environ deux doigts au-dessus du nombril.")}
+  ${step(2, 'Tour de hanches', "À l'endroit le plus large des fesses, pieds joints.")}
+  ${step(3, 'Tour de cuisse', 'Au plus large, juste sous la fesse. Toujours la même jambe.')}</div>
   <div class="card"><span class="lab">Mes astuces</span><ul class="clean mt">
-  <li>Mesure-toi le matin, à jeun, toujours au même moment.</li>
-  <li>Le mètre ruban est bien à plat, sans serrer la peau.</li>
-  <li>Une fois par semaine ou toutes les deux semaines, ça suffit largement.</li></ul></div>`;
+  <li>Le matin, avant le petit-déjeuner, toujours dans les mêmes conditions.</li>
+  <li>Un mètre ruban souple, bien à plat, sans serrer.</li>
+  <li>Debout, détendue, sans rentrer le ventre.</li>
+  <li>Une fois toutes les deux semaines suffit, ton corps change plus lentement qu'on ne le croit.</li></ul></div>`;
 }
 
 /* ---------- Profil ---------- */
