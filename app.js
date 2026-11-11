@@ -188,9 +188,9 @@ function bind() {
   app.querySelectorAll('[data-act]').forEach(b => b.onclick = e => { e.stopPropagation(); ACT[b.dataset.act](b.dataset.v, b); });
 }
 const prenom = () => (ME && ME.prenom) || '';
+const avatarInner = () => S.photo ? `<img src="${S.photo}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : esc((prenom() || 'C').charAt(0).toUpperCase());
 function headBlock() {
-  const ini = (prenom() || 'C').charAt(0).toUpperCase();
-  return `<div class="top"><span style="width:40px"></span><div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div><button class="avatar" data-go="profil||">${esc(ini)}</button></div>`;
+  return `<div class="top"><span style="width:40px"></span><div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div><button class="avatar" data-go="profil||" style="padding:0;overflow:hidden">${avatarInner()}</button></div>`;
 }
 
 /* ---------- Ma journée ---------- */
@@ -488,7 +488,8 @@ function vGuide() {
 /* ---------- Profil ---------- */
 function vProfil() {
   return `${back('Ma journée', 'journee')}
-  <div class="center"><div class="avatar" style="width:72px;height:72px;font-size:32px;margin:0 auto">${esc((prenom() || 'C').charAt(0))}</div><h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
+  <div class="center"><label style="cursor:pointer;display:inline-block"><div class="avatar" style="width:88px;height:88px;font-size:36px;margin:0 auto;overflow:hidden">${avatarInner()}</div><input type="file" accept="image/*" id="photo" style="display:none"><div class="small muted mt" style="text-decoration:underline">${S.photo ? 'Changer ma photo' : 'Ajouter ma photo'}</div></label>
+  ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
   <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Régularité</span><div class="serif" style="font-size:26px">${streak()} j</div></div><div class="card" style="margin:0"><span class="lab">Favorites</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
   <a class="card tap row" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
@@ -528,6 +529,7 @@ const ACT = {
     if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
     save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
   },
+  rmPhoto: () => { delete S.photo; save(); render(); },
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
@@ -549,6 +551,17 @@ const ACT = {
   },
   logout: async () => { await sb.auth.signOut(); localStorage.removeItem('cc_k'); location.reload(); }
 };
+document.addEventListener('change', e => {
+  if (e.target.id !== 'photo' || !e.target.files[0]) return;
+  const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    const n = 240, c = document.createElement('canvas'); c.width = c.height = n;
+    const k = Math.min(img.width, img.height), x = (img.width - k) / 2, y = (img.height - k) / 2;
+    c.getContext('2d').drawImage(img, x, y, k, k, 0, 0, n, n);
+    S.photo = c.toDataURL('image/jpeg', 0.82); URL.revokeObjectURL(url); save(); render(); toast('Photo enregistrée');
+  };
+  img.src = url;
+});
 document.addEventListener('input', e => { if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && PL && PL.run) { /* le minuteur continue en arrière-plan si possible */ } });
 
