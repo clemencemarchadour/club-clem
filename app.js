@@ -16,6 +16,7 @@ const ICON = {
 const TABS = [['journee', 'Ma journée'], ['table', 'À table'], ['bouger', 'Bouger'], ['rituel', 'Mon rituel'], ['journal', 'Mon journal']];
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const SPORTS = ['Marche', 'Course', 'Vélo', 'Natation', 'Yoga', 'Pilates', 'Renfo / salle', 'Danse', 'Cours collectif', 'Autre'];
 const LEVELS = { debute: ['Je débute', 30, 30], reprends: ['Je reprends', 40, 20], aise: ["Je suis à l'aise", 45, 15] };
 const SLOTS = [['b', 'Petit-déj'], ['l', 'Midi'], ['d', 'Soir']];
 const MOMENTS = [['matin', 'Le matin'], ['repas', 'Avant ton plus gros repas'], ['soir', 'Au dîner'], ['coucher', 'Au coucher']];
@@ -38,7 +39,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -408,12 +409,24 @@ function vBouger() {
   <div class="card"><div class="row between"><div><span class="lab">Aujourd'hui</span><div class="serif" style="font-size:30px">${S.moves[t] || 0} / 30 min</div></div><div style="text-align:right"><span class="lab">Cette semaine</span><div class="serif" style="font-size:22px">${week} min</div></div></div>
   <div class="progress"><i style="width:${Math.min(100, (S.moves[t] || 0) / 30 * 100)}%"></i></div>
   <button class="btn full mt" data-act="five">Je n'ai que 5 minutes</button></div>
+  ${actsCard(t)}
   <span class="lab">Mon niveau</span>
   <div class="chips">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
   ${groups.map(([g, l]) => `<h3 class="mt2" id="g_${g}">${l}</h3>${Object.entries(C.seances).filter(([, s]) => s.g === g).map(([id, s]) => seanceCard(id, s)).join('')}`).join('')}
   <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
 }
+function actsCard(t) {
+  const xs = (S.acts && S.acts[t]) || [], f = ui.actForm;
+  return `<div class="card"><div class="row between"><span class="lab">Mes activités du jour</span>${f ? '' : '<button class="link" data-act="actOpen">+ Ajouter</button>'}</div>
+  ${xs.length ? xs.map((x, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--filet)"><span>${esc(x.a)}</span><span class="row" style="gap:12px"><b>${x.m} min</b><button class="link small" data-act="actRm" data-v="${i}">Retirer</button></span></div>`).join('') : (f ? '' : '<p class="small muted" style="margin:6px 0 0">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
+  ${f ? `<p class="lab mt">Qu'as-tu fait ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${SPORTS.map(a => `<button class="chip ${f.a === a ? 'on' : ''}" data-act="actA" data-v="${a}">${a}</button>`).join('')}</div>
+  ${f.a === 'Autre' ? `<div class="field mt"><input id="act_o" placeholder="Ex. : tennis, randonnée…" value="${esc(f.o || '')}"></div>` : ''}
+  <p class="lab mt">Combien de temps ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[15, 30, 45, 60, 90].map(m => `<button class="chip ${f.m == m ? 'on' : ''}" data-act="actM" data-v="${m}">${m} min</button>`).join('')}</div>
+  <div class="field mt"><input id="act_m" inputmode="numeric" placeholder="Ou tape le nombre de minutes" value="${f.m && ![15, 30, 45, 60, 90].includes(+f.m) ? f.m : ''}"></div>
+  <div class="grid2 mt"><button class="btn ghost sm" data-act="actCancel">Annuler</button><button class="btn sm" data-act="actSave">Enregistrer</button></div>` : ''}</div>`;
+}
+function keepAct() { const f = ui.actForm; if (!f) return; const o = $('#act_o'), m = $('#act_m'); if (o) f.o = o.value; if (m && m.value) f.m = m.value; }
 function seanceCard(id, s) {
   const ids = [...new Set(s.steps.map(x => x[0]))].slice(0, 4);
   return `<div class="card tap" data-go="bouger|seance|${id}"><div class="row between"><div><div class="serif" style="font-size:18px">${esc(s.t)}</div><div class="small muted">${s.d} min · ${s.steps.length} exercices${s.rounds ? ' · ' + s.rounds + ' tours' : ''}</div></div><span class="pill">Go</span></div>
@@ -457,7 +470,7 @@ function tick() {
   }
   const t = $('#tm'); if (t) t.textContent = PL.left;
 }
-function finishSeance() { stopTimer(); const t = today(); S.moves[t] = (S.moves[t] || 0) + C.seances[PL.id].d; save(); PL.done = true; render(); }
+function finishSeance() { stopTimer(); const t = today(); S.moves[t] = (S.moves[t] || 0) + C.seances[PL.id].d; S.acts = S.acts || {}; (S.acts[t] = S.acts[t] || []).push({ a: 'Séance Club Clem : ' + C.seances[PL.id].t, m: C.seances[PL.id].d }); save(); PL.done = true; render(); }
 function vExos() {
   return `${back('Bouger', 'bouger')}<h2>Les exercices</h2>${Object.entries(C.ex).map(([k, e]) => `<div class="card tap row" data-go="bouger|exo|${k}" style="padding:10px"><img src="${e.img}" class="thumb" style="width:64px;height:64px;background:#fff;object-fit:contain" alt="" loading="lazy"><div class="grow"><div class="serif" style="font-size:17px">${esc(e.n)}</div><div class="small muted">${esc(e.z)}</div></div></div>`).join('')}`;
 }
@@ -620,6 +633,19 @@ const ACT = {
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
+  actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
+  actCancel: () => { ui.actForm = null; render(); },
+  actA: v => { keepAct(); ui.actForm.a = v; render(); },
+  actM: v => { keepAct(); ui.actForm.m = v; render(); },
+  actSave: () => {
+    keepAct(); const f = ui.actForm, t = today();
+    const a = f.a === 'Autre' ? (f.o || '').trim() || 'Autre activité' : f.a, m = parseInt(f.m);
+    if (!f.a) { toast('Choisis ton activité'); return; }
+    if (!m || m < 1 || m > 600) { toast('Indique la durée en minutes'); return; }
+    S.acts = S.acts || {}; (S.acts[t] = S.acts[t] || []).push({ a, m }); S.moves[t] = (S.moves[t] || 0) + m;
+    ui.actForm = null; save(); render(); toast('Activité ajoutée 🤎');
+  },
+  actRm: v => { const t = today(), x = S.acts[t][+v]; if (!x) return; S.acts[t].splice(+v, 1); S.moves[t] = Math.max(0, (S.moves[t] || 0) - x.m); save(); render(); },
   level: v => { S.level = v; save(); render(); },
   pPlay: () => { if (PL.run) { stopTimer(); render(); } else { PL.run = true; ui.timer = setInterval(tick, 1000); render(); PL.run = true; } },
   pNext: () => { const seq = seqOf(PL.id), run = PL.run; stopTimer(); PL.resting = false; PL.i++; if (PL.i >= seq.length) { finishSeance(); return; } PL.left = seq[PL.i].sec; render(); if (run) ACT.pPlay(); },
