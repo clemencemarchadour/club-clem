@@ -371,7 +371,7 @@ function filtered() {
     || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && (r.cat === 'encas' || r.cat === 'dessert')) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine));
 }
 function vRecettes() {
-  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas et desserts'], ['favs', 'Favorites'], ['mine', 'Mes recettes']];
+  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas et desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
   const list = filtered();
   return `<div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="rlist">${list.map(rCard).join('') || '<p class="muted center mt2">Rien ici pour l\'instant.</p>'}</div>
