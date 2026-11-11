@@ -138,7 +138,7 @@ ol.steps li{margin:8px 0}
 .day.on.has::after{background:#fff}
 .macros b{color:var(--brun)}
 .macros span{color:var(--sauge-f)}
-.macros div{background:var(--sauge);border-color:var(--sauge)}
-.macros div b,.macros div span{color:#fff}
-.macros div:first-child{background:var(--brun);border-color:var(--brun)}
-.macros div:first-child b,.macros div:first-child span{color:var(--ivoire)}
+.macros div{background:var(--brun);border-color:var(--brun)}
+.macros div b,.macros div span{color:var(--ivoire)}
+.macros div:first-child{background:var(--sauge);border-color:var(--sauge)}
+.macros div:first-child b,.macros div:first-child span{color:#fff}
