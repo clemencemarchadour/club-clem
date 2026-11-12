@@ -367,15 +367,20 @@ function vSemaine() {
 function filtered() {
   const f = ui.filter;
   const all = C.recipes.concat(S.own.map(r => Object.assign({ mine: true }, r)));
-  return all.filter(r => f === 'all' || (f === 'sucre' && r.type === 'pdj' && r.cat === 'sucre') || (f === 'sale' && r.type === 'pdj' && r.cat === 'sale')
+  const q = norm(ui.q || '').split(/\s+/).filter(Boolean);
+  return all.filter(r => !q.length || q.every(w => norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')).includes(w))).filter(r => f === 'all' || (f === 'sucre' && r.type === 'pdj' && r.cat === 'sucre') || (f === 'sale' && r.type === 'pdj' && r.cat === 'sale')
     || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && (r.cat === 'encas' || r.cat === 'dessert')) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine));
 }
 function vRecettes() {
   const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas et desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
   const list = filtered();
-  return `<div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
-  <div class="rlist">${list.map(rCard).join('') || '<p class="muted center mt2">Rien ici pour l\'instant.</p>'}</div>
+  return `<input type="search" id="rq" class="mt" placeholder="Rechercher : poulet, avocat, pancakes…" value="${esc(ui.q || '')}" autocomplete="off" enterkeyhint="search">
+  <div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
+  <div class="rlist">${rList(list)}</div>
   <button class="btn ghost full mt" data-act="newOwn">+ Ajouter ma propre recette</button>`;
+}
+function rList(list) {
+  return list.map(rCard).join('') || `<p class="muted center mt2">${ui.q ? 'Aucune recette ne correspond à ta recherche.' : 'Rien ici pour l\'instant.'}</p>`;
 }
 function rCard(r) {
   return `<div class="card tap row" data-go="table|recette|${r.id}">${r.img ? `<img class="thumb" src="${r.img}" alt="" loading="lazy">` : '<div class="thumb"></div>'}
@@ -810,10 +815,12 @@ document.addEventListener('change', e => {
   img.src = url;
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'rq') { ui.q = e.target.value; const box = document.querySelector('.rlist'); if (box) box.innerHTML = rList(filtered()); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
     if (e.target.dataset.k === 'f') { const box = document.getElementById('sug_' + i); if (box) { const sg = foodOf(e.target.value) ? [] : suggest(e.target.value); box.innerHTML = sg.length ? `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${sg.map(f => `<button class="chip" data-sug="${i}" data-name="${esc(f[0])}">${esc(f[0])}</button>`).join('')}</div>` : (e.target.value.trim().length > 2 ? '<p class="fine" style="margin:6px 0 0">Pas dans la liste : il ne sera pas compté.</p>' : ''); } } }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'rq') { e.target.blur(); return; }
   const t = e.target; if (e.key !== 'Enter' || !t.dataset || t.dataset.row === undefined || !ui.draft) return;
   e.preventDefault(); const i = +t.dataset.row, k = t.dataset.k, rows = ui.draft.rows, r = rows[i];
   const focus = (row, key) => setTimeout(() => { const el = document.querySelector(`[data-row="${row}"][data-k="${key}"]`); if (el) { el.focus(); if (el.select) el.select(); } }, 30);
