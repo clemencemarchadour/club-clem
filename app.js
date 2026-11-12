@@ -478,8 +478,13 @@ function pickSheet(day, slot) {
   const el = sheet(`<div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="heart" data-x>×</button></div>
     <button class="btn ghost full" data-own>+ Ajouter ma propre recette</button>
     <p class="small muted mt">Ou choisis parmi les idées de Clem :</p>
-    ${opts.map(r => `<div class="card tap row" data-pick="${r.id}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('')}`);
+    <input type="search" data-pq placeholder="Rechercher : poulet, avocat, pancakes…" autocomplete="off" enterkeyhint="search" style="margin-bottom:10px">
+    <p class="muted small center" data-pnone style="display:none">Aucune recette ne correspond à ta recherche.</p>
+    ${opts.map(r => `<div class="card tap row" data-pick="${r.id}" data-s="${esc(norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')))}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('')}`);
   el.querySelector('[data-x]').onclick = () => el.remove();
+  const pq = el.querySelector('[data-pq]');
+  pq.oninput = () => { const q = norm(pq.value).split(/\s+/).filter(Boolean); let n = 0; el.querySelectorAll('[data-pick]').forEach(c => { const ok = q.every(w => c.dataset.s.includes(w)); c.style.display = ok ? '' : 'none'; n += ok; }); el.querySelector('[data-pnone]').style.display = n ? 'none' : ''; };
+  pq.onkeydown = e => { if (e.key === 'Enter') pq.blur(); };
   el.querySelector('[data-own]').onclick = () => { el.remove(); ui.draft = null; ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
   el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); el.remove(); render(); toast('Ajouté à ta journée'); });
 }
