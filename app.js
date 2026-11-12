@@ -565,8 +565,7 @@ function vBouger() {
 }
 function actsCard(t) {
   const xs = (S.acts && S.acts[t]) || [], f = ui.actForm, tot = xs.reduce((a, x) => a + (+x.m || 0), 0);
-  return `<div class="card acts"><div class="row between"><span class="lab" style="color:var(--sauge-f)">Hors de l'app</span>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
-  <h3 class="serif" style="margin:6px 0 4px;font-size:22px">J'ai bougé aujourd'hui</h3>
+  return `<div class="card acts"><div class="row between" style="align-items:center"><h3 class="serif" style="margin:0 0 4px;font-size:22px">J'ai bougé aujourd'hui</h3>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
   ${xs.length ? xs.map((x, i) => `<div class="actline"><span class="actok">✓</span><span class="grow">${esc(x.a)}</span><b>${x.m} min</b><button class="heart" data-act="actRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('') : (f ? '' : '<p class="small" style="margin:0 0 4px;color:var(--txt2)">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
   ${f ? `<p class="lab mt">Qu'as-tu fait ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${SPORTS.map(a => `<button class="chip ${f.a === a ? 'on' : ''}" data-act="actA" data-v="${a}">${a}</button>`).join('')}</div>
   ${f.a === 'Autre' ? `<div class="field mt"><input id="act_o" placeholder="Ex. : tennis, randonnée…" value="${esc(f.o || '')}"></div>` : ''}
