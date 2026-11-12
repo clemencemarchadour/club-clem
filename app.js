@@ -493,7 +493,7 @@ function pickSheet(day, slot, mode = 'r') {
   const isB = r => r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
   const list = () => (((S.eat = S.eat || {})[day] = S.eat[day] || {})[slot] = S.eat[day][slot] || []);
-  const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="heart" data-x>×</button></div>
+  const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="done-btn" data-x>Terminé</button></div>
     <div class="seg mini" style="margin:6px 0 8px"><button data-mode="r">Recettes</button><button data-mode="f">Aliments</button></div>
     <input type="search" data-pq autocomplete="off" enterkeyhint="search"></div>
     <div data-body></div>`);
@@ -514,7 +514,7 @@ function pickSheet(day, slot, mode = 'r') {
       <div class="row" style="gap:8px;margin-top:6px"><button class="stp" data-st="${i}|-1">−</button><input inputmode="decimal" data-q="${i}" value="${esc(String(e.q).replace('.', ','))}" style="flex:1;text-align:center;padding:8px">
       <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
       <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
-    <button class="btn full mt" data-ok>Valider</button></div>`; };
+    <p class="fine center" style="margin:10px 0 0">Ajoute tous tes aliments, puis touche <b>Terminé</b> en haut.</p></div>`; };
   const foodBody = () => {
     const q = pq.value.trim();
     const res = q ? suggest(q) : (S.recentF || []).map(foodOf).filter(Boolean);
@@ -528,13 +528,12 @@ function pickSheet(day, slot, mode = 'r') {
     body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.st.split('|'); const e = list()[+i]; const step = e.u === 'u' ? 0.5 : 10; e.q = Math.max(step, Math.round(((+e.q || 0) + d * step) * 10) / 10); save(); foodBody(); });
     body.querySelectorAll('[data-q]').forEach(b => b.onchange = () => { const v = parseFloat(b.value.replace(',', '.')); if (v > 0) { list()[+b.dataset.q].q = v; save(); } foodBody(); });
     body.querySelectorAll('[data-u]').forEach(b => b.onchange = () => { const e = list()[+b.dataset.u], f = foodOf(e.f); e.u = b.value; e.q = e.u === 'u' ? 1 : (f && f[5]) || 100; save(); foodBody(); });
-    const ok = body.querySelector('[data-ok]'); if (ok) ok.onclick = () => { done(); toast('Repas enregistré'); };
   };
   const setMode = m => { mode = m; el.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); pq.value = ''; pq.placeholder = m === 'f' ? 'Rechercher un aliment : compote, pain…' : 'Rechercher : poulet, avocat, pancakes…'; (m === 'f' ? foodBody : recBody)(); };
   el.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   pq.oninput = () => { (mode === 'f' ? foodBody : recBody)(); el.querySelector('.in').scrollTop = 0; };
   pq.onkeydown = e => { if (e.key === 'Enter') pq.blur(); };
-  el.querySelector('[data-x]').onclick = done;
+  el.querySelector('[data-x]').onclick = () => { const n = list().length; done(); if (mode === 'f' && n) toast('Repas enregistré'); };
   el.addEventListener('click', e => { if (e.target === el) render(); });
   setMode(mode);
 }
