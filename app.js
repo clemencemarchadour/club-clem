@@ -19,6 +19,8 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
 const SPORTS = ['Marche', 'Course', 'Vélo', 'Natation', 'Yoga', 'Pilates', 'Renfo / salle', 'Danse', 'Cours collectif', 'Autre'];
 const LEVELS = { debute: ['Je débute', 30, 30], reprends: ['Je reprends', 40, 20], aise: ["Je suis à l'aise", 45, 15] };
 const SLOTS = [['b', 'Petit-déj'], ['l', 'Midi'], ['s', 'En-cas'], ['d', 'Soir']];
+const MYSLOTS = () => SLOTS.filter(([k]) => !(S.hide || []).includes(k));
+const slotChips = () => `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${SLOTS.map(([k, l]) => `<button class="chip ${(S.hide || []).includes(k) ? '' : 'on'}" data-act="slotToggle" data-v="${k}">${l}</button>`).join('')}</div>`;
 const MOMENTS = [['matin', 'Le matin'], ['repas', 'Avant ton plus gros repas'], ['soir', 'Au dîner'], ['coucher', 'Au coucher']];
 
 let C = null;          // contenu
@@ -39,7 +41,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -318,7 +320,7 @@ function vJournee() {
     ${prises.length ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
   <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
-    ${SLOTS.map(([k, l]) => slotRow(t, k, l)).join('')}</div>
+    ${MYSLOTS().map(([k, l]) => slotRow(t, k, l)).join('')}</div>
   ${waterCard(t)}
   <div class="grid2">
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
@@ -358,10 +360,11 @@ function vSemaine() {
   const tot = { kcal: 0, p: 0, g: 0, l: 0 };
   SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); });
   return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''} ${Object.values(S.plan[d] || {}).some(Boolean) ? 'has' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
-  <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${SLOTS.map(([k, l]) => slotRow(ui.day, k, l)).join('')}</div>
+  <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${MYSLOTS().map(([k, l]) => slotRow(ui.day, k, l)).join('')}</div>
   <div class="card"><span class="lab">Total de la journée</span>
     <div class="macros"><div><b>${tot.kcal}</b><span>kcal</span></div><div><b>${tot.p}</b><span>protéines</span></div><div><b>${tot.g}</b><span>glucides</span></div><div><b>${tot.l}</b><span>lipides</span></div></div>
     <p class="fine" style="margin:0">Des repères, pas un régime : écoute ta faim et adapte les portions.</p></div>
+  <div class="card"><span class="lab">Repas affichés</span>${slotChips()}</div>
   <button class="btn ghost full" data-act="seg" data-v="courses">Voir ma liste de courses</button>`;
 }
 function filtered() {
@@ -696,7 +699,8 @@ function vProfil() {
   ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
   <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Jours actifs</span><div class="serif" style="font-size:26px">${activeDays()}</div></div><div class="card" style="margin:0"><span class="lab">Recettes préférées</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
   ${badgesBlock()}
-  <a class="card tap row mt2" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
+  <div class="card mt2"><span class="lab">Mes repas</span><p class="small muted" style="margin:6px 0 0">Choisis les repas qui s'affichent dans Ma journée et Ma semaine. Tu jeûnes le matin ? Retire le petit-déj.</p>${slotChips()}</div>
+  <a class="card tap row" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
   ${installHint()}
   <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Ton journal et tes mesures restent sur ton téléphone. Tes favoris, ta semaine et ton rituel sont sauvegardés de façon privée sur ton compte.</p></div>
@@ -713,6 +717,7 @@ const ACT = {
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
   day: v => { ui.day = v; render(); },
   filter: v => { ui.filter = v; render(); },
+  slotToggle: v => { const h = S.hide || (S.hide = []); const i = h.indexOf(v); if (i >= 0) h.splice(i, 1); else if (h.length >= SLOTS.length - 1) return toast('Garde au moins un repas'); else h.push(v); save(); render(); },
   fav: v => { S.favs = S.favs.includes(v) ? S.favs.filter(x => x !== v) : S.favs.concat(v); save(); render(); },
   addDay: v => {
     const r = R(v), t = today(), p = S.plan[t] = S.plan[t] || {};
