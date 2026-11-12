@@ -711,14 +711,14 @@ function vFiche(id) {
 
 /* ---------- Mon journal ---------- */
 const FEEL = [['e', 'Énergie', ['À plat', 'Fatiguée', 'Correcte', 'En forme', 'Au top']], ['s', 'Sommeil', ['Très mauvaise nuit', 'Nuit agitée', 'Nuit correcte', 'Bonne nuit', 'Nuit réparatrice']],
-  ['d', 'Digestion', ['Très inconfortable', 'Ballonnée', 'Correcte', 'Bonne', 'Ventre léger']], ['c', 'Sérénité face au sucré', ['Envies irrésistibles', 'Envies fortes', 'Quelques envies', 'Envies légères', 'Aucune envie']]];
+  ['d', 'Digestion', ['Très inconfortable', 'Ballonnée', 'Correcte', 'Bonne', 'Ventre léger']], ['c', 'Envies de sucré', ['Aucune', 'Légères', 'Présentes', 'Fortes', 'Irrésistibles']]];
 function vJournal() {
+  if (!L.sucreV2) { Object.values(L.journal).forEach(j => { if (j && j.c) j.c = 6 - j.c; }); L.sucreV2 = 1; save(); }
   if (ui.sub === 'guide') return vGuide();
   const d = ui.jday || today(), j = L.journal[d] || {};
   return `${headBlock()}
   <div class="row between"><button class="heart" data-act="jday" data-v="-1">‹</button><span class="lab">${esc(longDate(d))}</span><button class="heart" data-act="jday" data-v="1" ${d === today() ? 'disabled style="opacity:.3"' : ''}>›</button></div>
   <div class="card"><span class="lab">Mon ressenti</span>
-  <p class="fine" style="margin:6px 0 4px">Plus c'est rempli, mieux je me sens.</p>
   ${FEEL.map(([k, l, w]) => `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row between"><span>${l}</span><div class="dots">${[1, 2, 3, 4, 5].map(n => `<button class="${(j[k] || 0) >= n ? 'on' : ''}" data-act="feel" data-v="${k}|${n}" aria-label="${esc(w[n - 1])}"></button>`).join('')}</div></div>
   <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}</div>
   <div class="card"><span class="lab">Ma note du jour</span><textarea id="jnote" class="mt" placeholder="Ce que j'ai remarqué aujourd'hui…">${esc(j.note || '')}</textarea></div>
