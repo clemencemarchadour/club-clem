@@ -645,7 +645,8 @@ const essLine = (t, e) => `<div class="check ${essOn(t, e.id) ? 'on' : ''}" data
 function essCard(t) {
   const xs = essList(), f = ui.essForm;
   return `<div class="card"><span class="lab">Mes essentiels</span>
-  <p class="small" style="margin:6px 0 4px;color:var(--txt2)">Ce que tu prends en plus de ton rituel Belles Sœurs : vitamines, magnésium, oméga 3, pilule, traitement… Ajoute-les ici pour avoir toute ta checklist du jour au même endroit. Ces infos restent uniquement sur ton téléphone.</p>
+  <p class="small" style="margin:6px 0 4px;color:var(--txt2)">Ce que tu prends en plus de ton rituel Belles Sœurs : vitamines, magnésium, oméga 3, pilule, traitement… Ajoute-les ici pour avoir toute ta checklist du jour au même endroit.</p>
+  <p class="small" style="margin:0 0 4px;color:var(--sauge-f)">🔒 Ces infos sont confidentielles : elles restent uniquement sur ton téléphone et personne d'autre n'y a accès, même pas Clem.</p>
   ${xs.map(e => `<div class="row" style="gap:6px">${essLine(t, e).replace('class="check', 'style="flex:1" class="check')}<button class="heart" data-act="essRm" data-v="${e.id}" aria-label="Retirer">×</button></div>`).join('')}
   ${f ? `<div class="field mt"><input id="ess_n" placeholder="Ex. : magnésium, pilule…" value="${esc(f.n || '')}" autocomplete="off"></div>
   <p class="lab mt">Quand ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${ESS_M.map(([k, l]) => `<button class="chip ${f.m === k ? 'on' : ''}" data-act="essM" data-v="${k}">${l}</button>`).join('')}</div>
