@@ -564,14 +564,16 @@ function vBouger() {
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
 }
 function actsCard(t) {
-  const xs = (S.acts && S.acts[t]) || [], f = ui.actForm;
-  return `<div class="card"><div class="row between"><span class="lab">Mes activités du jour</span>${f ? '' : '<button class="link" data-act="actOpen">+ Ajouter</button>'}</div>
-  ${xs.length ? xs.map((x, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--filet)"><span>${esc(x.a)}</span><span class="row" style="gap:12px"><b>${x.m} min</b><button class="link small" data-act="actRm" data-v="${i}">Retirer</button></span></div>`).join('') : (f ? '' : '<p class="small muted" style="margin:6px 0 0">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
+  const xs = (S.acts && S.acts[t]) || [], f = ui.actForm, tot = xs.reduce((a, x) => a + (+x.m || 0), 0);
+  return `<div class="card acts"><div class="row between"><span class="lab" style="color:var(--sauge-f)">Hors de l'app</span>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
+  <h3 class="serif" style="margin:6px 0 4px;font-size:22px">J'ai bougé aujourd'hui</h3>
+  ${xs.length ? xs.map((x, i) => `<div class="actline"><span class="actok">✓</span><span class="grow">${esc(x.a)}</span><b>${x.m} min</b><button class="heart" data-act="actRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('') : (f ? '' : '<p class="small" style="margin:0 0 4px;color:var(--txt2)">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
   ${f ? `<p class="lab mt">Qu'as-tu fait ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${SPORTS.map(a => `<button class="chip ${f.a === a ? 'on' : ''}" data-act="actA" data-v="${a}">${a}</button>`).join('')}</div>
   ${f.a === 'Autre' ? `<div class="field mt"><input id="act_o" placeholder="Ex. : tennis, randonnée…" value="${esc(f.o || '')}"></div>` : ''}
   <p class="lab mt">Combien de temps ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[15, 30, 45, 60, 90].map(m => `<button class="chip ${f.m == m ? 'on' : ''}" data-act="actM" data-v="${m}">${m} min</button>`).join('')}</div>
   <div class="field mt"><input id="act_m" inputmode="numeric" placeholder="Ou tape le nombre de minutes" value="${f.m && ![15, 30, 45, 60, 90].includes(+f.m) ? f.m : ''}"></div>
-  <div class="grid2 mt"><button class="btn ghost sm" data-act="actCancel">Annuler</button><button class="btn sm" data-act="actSave">Enregistrer</button></div>` : ''}</div>`;
+  <div class="grid2 mt"><button class="btn ghost sm" data-act="actCancel">Annuler</button><button class="btn sm" data-act="actSave">Enregistrer</button></div>`
+  : `<button class="btn full mt" data-act="actOpen" style="background:var(--sauge-f);border-color:var(--sauge-f)">+ Ajouter une activité</button>`}</div>`;
 }
 function keepAct() { const f = ui.actForm; if (!f) return; const o = $('#act_o'), m = $('#act_m'); if (o) f.o = o.value; if (m && m.value) f.m = m.value; }
 function seanceCard(id, s) {
