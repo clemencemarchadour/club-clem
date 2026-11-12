@@ -315,7 +315,7 @@ function vJournee() {
     <p class="lab mt" style="text-align:right">Le mot de Clem</p></div>
   ${nextBadgeCard()}
   <div class="card tap" data-go="rituel||"><div class="row between"><span class="lab">Mon rituel</span><span class="pill">${prises.length ? done + ' / ' + prises.length : 'à configurer'}</span></div>
-    ${prises.length ? prises.slice(0, 4).map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('')
+    ${prises.length ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
   <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
     ${SLOTS.map(([k, l]) => slotRow(t, k, l)).join('')}</div>
