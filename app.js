@@ -41,7 +41,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, recentF: [], level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -255,7 +255,7 @@ const BADGES = [
 function activeDays() {
   const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(S.water || {}), ...Object.keys(L.journal || {})]);
   let n = 0;
-  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || Object.values(S.plan[x] || {}).some(Boolean) || (S.water && S.water[x]) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
+  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || dayHas(x) || (S.water && S.water[x]) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
   return n;
 }
 const medal = (b, cls = '') => `<div class="med t${b[3]} ${cls}"><b>${b[4]}</b><span>${b[5]}</span></div>`;
@@ -337,11 +337,29 @@ function waterCard(t) {
   <div style="position:relative;margin-top:10px"><div class="progress" style="margin:0"><i style="width:${Math.min(100, tot / (goal * cl) * 100)}%"></i></div><span style="position:absolute;left:${min / (goal * cl) * 100}%;top:-4px;width:2px;height:14px;background:var(--brun);border-radius:2px"></span></div>
   <div class="row between small muted" style="margin-top:6px"><span>1 verre = 25 cl</span><span>${tot >= goal * cl ? '2 L, bravo 🤎' : tot >= min ? '1,5 L atteint, bravo !' : 'Minimum : 1,5 L'}</span></div></div>`;
 }
+const eatOf = (day, k) => ((S.eat || {})[day] || {})[k] || [];
+const fGrams = e => { const f = foodOf(e.f); const q = +e.q || 0; return f && e.u === 'u' && f[5] ? q * f[5] : q; };
+const fVals = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
+const fQty = e => { const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${f[6]}${+e.q > 1 && f[6].length < 12 ? 's' : ''}` : `${q} g`; };
+function dayTotal(day) {
+  const plan = S.plan[day] || {}, tot = { kcal: 0, p: 0, g: 0, l: 0 };
+  SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
+  ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] = Math.round(tot[x])); return tot;
+}
+const dayHas = d => Object.values(S.plan[d] || {}).some(Boolean) || Object.values((S.eat || {})[d] || {}).some(a => a && a.length);
 function slotRow(day, k, l) {
-  const id = (S.plan[day] || {})[k], r = id && R(id);
-  return `<div class="slot">${r ? (r.img ? `<img src="${r.img}" alt="">` : '<div class="empty filled">✎</div>') : `<div class="empty" data-act="pick" data-v="${day}|${k}">+</div>`}
-    <div class="grow" ${r ? `data-go="table|recette|${r.id}"` : `data-act="pick" data-v="${day}|${k}"`} style="cursor:pointer"><div class="lab">${l}</div><div>${r ? esc(r.t) : '<span class="muted">Choisir une recette</span>'}</div>${r && (r.kcal || r.time) ? `<div class="small muted">${[r.time, r.kcal ? r.kcal + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
-    ${r ? `<button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button>` : ''}</div>`;
+  const id = (S.plan[day] || {})[k], r = id && R(id), foods = eatOf(day, k);
+  const fk = Math.round(foods.reduce((a, e) => a + fVals(e).kcal, 0));
+  const head = r
+    ? `<div class="slot">${r.img ? `<img src="${r.img}" alt="">` : '<div class="empty filled">✎</div>'}
+      <div class="grow" data-go="table|recette|${r.id}" style="cursor:pointer"><div class="lab">${l}</div><div>${esc(r.t)}</div>${r.kcal || r.time ? `<div class="small muted">${[r.time, r.kcal ? r.kcal + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
+      <button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button></div>`
+    : foods.length
+      ? `<div class="slot" style="border-bottom:0;padding-bottom:2px"><div class="empty filled" data-act="pick" data-v="${day}|${k}|f">+</div><div class="grow" data-act="pick" data-v="${day}|${k}|f" style="cursor:pointer"><div class="lab">${l}</div><div class="small muted">${fk} kcal</div></div></div>`
+      : `<div class="slot"><div class="empty" data-act="pick" data-v="${day}|${k}">+</div><div class="grow" data-act="pick" data-v="${day}|${k}" style="cursor:pointer"><div class="lab">${l}</div><div><span class="muted">Choisir une recette ou des aliments</span></div></div></div>`;
+  if (!foods.length) return r ? `<div class="slotwrap">${head}<div class="addf"><button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>` : head;
+  return `<div class="slotwrap">${head}<div class="flist">${foods.map((e, i) => `<div class="fline"><span class="grow">${esc(e.f)} <span class="muted">· ${esc(fQty(e))}</span></span><span class="small muted">${Math.round(fVals(e).kcal)} kcal</span><button class="heart" data-act="rmFood" data-v="${day}|${k}|${i}" aria-label="Retirer">×</button></div>`).join('')}
+    <button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>`;
 }
 
 /* ---------- À table ---------- */
@@ -357,9 +375,8 @@ function vSemaine() {
   const t = today(); if (!ui.day) ui.day = t;
   const days = Array.from({ length: 7 }, (_, i) => addDays(t, i));
   const plan = S.plan[ui.day] || {};
-  const tot = { kcal: 0, p: 0, g: 0, l: 0 };
-  SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); });
-  return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''} ${Object.values(S.plan[d] || {}).some(Boolean) ? 'has' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
+  const tot = dayTotal(ui.day);
+  return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''} ${dayHas(d) ? 'has' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
   <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${MYSLOTS().map(([k, l]) => slotRow(ui.day, k, l)).join('')}</div>
   <div class="card"><span class="lab">Total de la journée</span>
     <div class="macros"><div><b>${tot.kcal}</b><span>kcal</span></div><div><b>${tot.p}</b><span>protéines</span></div><div><b>${tot.g}</b><span>glucides</span></div><div><b>${tot.l}</b><span>lipides</span></div></div>
@@ -472,22 +489,53 @@ function vCourses() {
     ${(r.ing || []).map((i, n) => { const k = r.id + ':' + n; return `<div class="check ${S.checked[k] ? 'on' : ''}" data-act="chk" data-v="${k}"><span class="box">${S.checked[k] ? '✓' : ''}</span><span class="ctext">${esc(i)}</span></div>`; }).join('')}</div>`).join('')
     + '<button class="btn soft full" data-act="clearCourses">Tout décocher</button>';
 }
-function pickSheet(day, slot) {
+function pickSheet(day, slot, mode = 'r') {
   const isB = r => r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
+  const list = () => (((S.eat = S.eat || {})[day] = S.eat[day] || {})[slot] = S.eat[day][slot] || []);
   const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="heart" data-x>×</button></div>
-    <input type="search" data-pq placeholder="Rechercher : poulet, avocat, pancakes…" autocomplete="off" enterkeyhint="search"></div>
-    <button class="btn ghost full mt" data-own>+ Ajouter ma propre recette</button>
-    <p class="small muted mt">Ou choisis parmi les idées de Clem :</p>
-    <p class="muted small center" data-pnone style="display:none">Aucune recette ne correspond à ta recherche.</p>
-    ${opts.map(r => `<div class="card tap row" data-pick="${r.id}" data-s="${esc(norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')))}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('')}`);
+    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="r">Recettes</button><button data-mode="f">Aliments</button></div>
+    <input type="search" data-pq autocomplete="off" enterkeyhint="search"></div>
+    <div data-body></div>`);
   el.classList.add('full');
-  el.querySelector('[data-x]').onclick = () => el.remove();
-  const pq = el.querySelector('[data-pq]');
-  pq.oninput = () => { const q = norm(pq.value).split(/\s+/).filter(Boolean); let n = 0; el.querySelectorAll('[data-pick]').forEach(c => { const ok = q.every(w => c.dataset.s.includes(w)); c.style.display = ok ? '' : 'none'; n += ok; }); el.querySelector('[data-pnone]').style.display = n ? 'none' : ''; el.querySelector('.in').scrollTop = 0; };
+  const pq = el.querySelector('[data-pq]'), body = el.querySelector('[data-body]');
+  const done = () => { el.remove(); render(); };
+  const recBody = () => {
+    const q = norm(pq.value).split(/\s+/).filter(Boolean);
+    const L = opts.filter(r => q.every(w => norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')).includes(w)));
+    body.innerHTML = `<button class="btn ghost full mt" data-own>+ Créer ma propre recette</button>
+      ${L.length ? L.map(r => `<div class="card tap row" data-pick="${r.id}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('') : '<p class="muted small center mt">Aucune recette ne correspond à ta recherche.</p>'}`;
+    body.querySelector('[data-own]').onclick = () => { el.remove(); ui.draft = null; ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
+    body.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); done(); toast('Ajouté à ta journée'); });
+  };
+  const addedHtml = () => { const a = list(); if (!a.length) return ''; const k = Math.round(a.reduce((x, e) => x + fVals(e).kcal, 0));
+    return `<div class="card" style="padding:12px 14px"><div class="row between"><span class="lab">Dans ce repas</span><span class="small muted">${k} kcal</span></div>
+    ${a.map((e, i) => { const f = foodOf(e.f) || []; return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div>
+      <div class="row" style="gap:8px;margin-top:6px"><button class="stp" data-st="${i}|-1">−</button><input inputmode="decimal" data-q="${i}" value="${esc(String(e.q).replace('.', ','))}" style="flex:1;text-align:center;padding:8px">
+      <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
+      <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
+    <button class="btn full mt" data-ok>Valider</button></div>`; };
+  const foodBody = () => {
+    const q = pq.value.trim();
+    const res = q ? suggest(q) : (S.recentF || []).map(foodOf).filter(Boolean);
+    body.innerHTML = addedHtml() + `<p class="small muted mt">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? 'Tes aliments récents :' : 'Tape un aliment : compote, pain, banane, yaourt…')}</p>
+      ${res.map(f => `<div class="card tap row" data-addf="${esc(f[0])}" style="padding:10px 14px"><div class="grow"><div>${esc(f[0])}</div><div class="small muted">${f[5] ? `1 ${esc(f[6])} (${f[5]} g) · ${Math.round(f[1] * f[5] / 100)} kcal` : `100 g · ${Math.round(f[1])} kcal`}</div></div><span style="font-size:22px;color:var(--sauge-f)">+</span></div>`).join('')}
+      ${q && !res.length ? '<p class="muted small center">Rien trouvé. Essaie un mot plus simple.</p>' : ''}`;
+    body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().push({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
+      S.recentF = [f[0]].concat((S.recentF || []).filter(x => x !== f[0])).slice(0, 12); save(); pq.value = ''; foodBody(); el.querySelector('.in').scrollTop = 0; });
+    body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); foodBody(); });
+    body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.st.split('|'); const e = list()[+i]; const step = e.u === 'u' ? 0.5 : 10; e.q = Math.max(step, Math.round(((+e.q || 0) + d * step) * 10) / 10); save(); foodBody(); });
+    body.querySelectorAll('[data-q]').forEach(b => b.onchange = () => { const v = parseFloat(b.value.replace(',', '.')); if (v > 0) { list()[+b.dataset.q].q = v; save(); } foodBody(); });
+    body.querySelectorAll('[data-u]').forEach(b => b.onchange = () => { const e = list()[+b.dataset.u], f = foodOf(e.f); e.u = b.value; e.q = e.u === 'u' ? 1 : (f && f[5]) || 100; save(); foodBody(); });
+    const ok = body.querySelector('[data-ok]'); if (ok) ok.onclick = () => { done(); toast('Repas enregistré'); };
+  };
+  const setMode = m => { mode = m; el.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); pq.value = ''; pq.placeholder = m === 'f' ? 'Rechercher un aliment : compote, pain…' : 'Rechercher : poulet, avocat, pancakes…'; (m === 'f' ? foodBody : recBody)(); };
+  el.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  pq.oninput = () => { (mode === 'f' ? foodBody : recBody)(); el.querySelector('.in').scrollTop = 0; };
   pq.onkeydown = e => { if (e.key === 'Enter') pq.blur(); };
-  el.querySelector('[data-own]').onclick = () => { el.remove(); ui.draft = null; ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
-  el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); el.remove(); render(); toast('Ajouté à ta journée'); });
+  el.querySelector('[data-x]').onclick = done;
+  el.addEventListener('click', e => { if (e.target === el) render(); });
+  setMode(mode);
 }
 
 /* ---------- Bouger ---------- */
@@ -718,7 +766,8 @@ const ACT = {
   take: v => { const t = today(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
   tableSemaine: () => { ui.tableSeg = 'semaine'; ui.day = today(); go('table'); },
   sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
-  pick: v => { const [d, s] = v.split('|'); pickSheet(d, s); },
+  pick: v => { const [d, s, m] = v.split('|'); pickSheet(d, s, m === 'f' ? 'f' : 'r'); },
+  rmFood: v => { const [d, k, i] = v.split('|'); const a = eatOf(d, k); a.splice(+i, 1); save(); render(); },
   unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
   day: v => { ui.day = v; render(); },

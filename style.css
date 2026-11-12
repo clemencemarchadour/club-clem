@@ -172,3 +172,13 @@ ol.steps li{margin:8px 0}
 .card.compact .check .box{width:22px;height:22px;min-width:22px;font-size:12px}
 .card.compact .check .ctext{font-size:14px;line-height:1.3}
 .card.compact .check .ctext .small{font-size:12px}
+.slotwrap{border-bottom:1px solid var(--filet);padding-bottom:8px}
+.slotwrap:last-child{border-bottom:0}
+.slotwrap .slot{border-bottom:0}
+.flist{padding-left:68px}
+.fline{display:flex;align-items:center;gap:8px;font-size:14px;padding:4px 0}
+.fline .heart{font-size:16px;padding:0 4px}
+.addf{padding-left:68px;margin-top:-4px}
+.fedit{padding:10px 0;border-bottom:1px solid var(--filet)}
+.stp{width:40px;height:40px;border-radius:50%;border:1px solid var(--filet);background:var(--ivoire);font-size:20px;flex:none;cursor:pointer;color:var(--brun)}
+.seg.mini button{padding:8px 4px}
