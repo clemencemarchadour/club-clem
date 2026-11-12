@@ -41,7 +41,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, recentF: [], level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, recentF: [], favF: [], level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -499,6 +499,7 @@ function pickSheet(day, slot, mode = 'f') {
     <div data-body></div>`);
   el.classList.add('full');
   const pq = el.querySelector('[data-pq]'), body = el.querySelector('[data-body]');
+  let fsub = (S.favF || []).length ? 'fav' : 'rec';
   const done = () => { el.remove(); render(); };
   const recBody = () => {
     const q = norm(pq.value).split(/\s+/).filter(Boolean);
@@ -517,11 +518,16 @@ function pickSheet(day, slot, mode = 'f') {
     <p class="fine center" style="margin:10px 0 0">Ajoute tous tes aliments, puis touche <b>Terminé</b> en haut.</p></div>`; };
   const foodBody = () => {
     const q = pq.value.trim();
-    const res = q ? suggest(q) : (S.recentF || []).map(foodOf).filter(Boolean);
-    const resHtml = `<p class="small muted mt">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? 'Tes aliments récents :' : 'Tape un aliment : compote, pain, banane, yaourt…')}</p>
-      ${res.map(f => `<div class="card tap row" data-addf="${esc(f[0])}" style="padding:10px 14px"><div class="grow"><div>${esc(f[0])}</div><div class="small muted">${f[5] ? `1 ${esc(f[6])} (${f[5]} g) · ${Math.round(f[1] * f[5] / 100)} kcal` : `100 g · ${Math.round(f[1])} kcal`}</div></div><span style="font-size:22px;color:var(--sauge-f)">+</span></div>`).join('')}
+    const fav = S.favF || (S.favF = []);
+    const res = q ? suggest(q) : (fsub === 'fav' ? fav : (S.recentF || [])).map(foodOf).filter(Boolean);
+    const tabs = q ? '' : `<div class="chips" style="padding-top:12px"><button class="chip ${fsub === 'rec' ? 'on' : ''}" data-fsub="rec">Récents</button><button class="chip ${fsub === 'fav' ? 'on' : ''}" data-fsub="fav">♥ Favoris${fav.length ? ' (' + fav.length + ')' : ''}</button></div>`;
+    const emptyMsg = fsub === 'fav' ? 'Pas encore de favoris. Touche le ♡ à côté d\'un aliment pour le retrouver ici.' : 'Tape un aliment : compote, pain, banane, yaourt…';
+    const resHtml = tabs + `<p class="small muted ${q ? 'mt' : ''}">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? (fsub === 'fav' ? 'Tes aliments favoris :' : 'Tes aliments récents :') : emptyMsg)}</p>
+      ${res.map(f => `<div class="card tap row" data-addf="${esc(f[0])}" style="padding:10px 14px"><div class="grow"><div>${esc(f[0])}</div><div class="small muted">${f[5] ? `1 ${esc(f[6])} (${f[5]} g) · ${Math.round(f[1] * f[5] / 100)} kcal` : `100 g · ${Math.round(f[1])} kcal`}</div></div><button class="heart" data-favf="${esc(f[0])}" aria-label="Favori">${fav.includes(f[0]) ? '♥' : '♡'}</button><span style="font-size:22px;color:var(--sauge-f);margin-left:4px">+</span></div>`).join('')}
       ${q && !res.length ? '<p class="muted small center">Rien trouvé. Essaie un mot plus simple.</p>' : ''}`;
     body.innerHTML = q ? resHtml + addedHtml() : addedHtml() + resHtml;
+    body.querySelectorAll('[data-fsub]').forEach(b => b.onclick = () => { fsub = b.dataset.fsub; foodBody(); });
+    body.querySelectorAll('[data-favf]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const n = b.dataset.favf, fv = S.favF; const i = fv.indexOf(n); if (i >= 0) fv.splice(i, 1); else fv.unshift(n); save(); foodBody(); });
     body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().push({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
       S.recentF = [f[0]].concat((S.recentF || []).filter(x => x !== f[0])).slice(0, 12); save(); pq.value = ''; foodBody(); el.querySelector('.in').scrollTop = 0; });
     body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); foodBody(); });
