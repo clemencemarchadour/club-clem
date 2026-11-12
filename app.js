@@ -558,7 +558,7 @@ function vBouger() {
   <button class="btn full mt" data-act="five">Je n'ai que 5 minutes</button></div>
   ${actsCard(t)}
   <span class="lab">Mon niveau</span>
-  <div class="chips">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
+  <div class="chips lvl">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
   ${groups.map(([g, l]) => `<h3 class="mt2" id="g_${g}">${l}</h3>${Object.entries(C.seances).filter(([, s]) => s.g === g).map(([id, s]) => seanceCard(id, s)).join('')}`).join('')}
   <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
