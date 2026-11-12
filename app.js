@@ -412,9 +412,9 @@ function vAjout() {
   <div class="card"><span class="lab">Ingrédients</span>
   <p class="fine" style="margin:6px 0 10px">Tape l'aliment comme tu le dis, par exemple « 2 œufs » ou « 150 g de riz », puis touche la bonne proposition : les calories et les macros se calculent toutes seules.</p>
   ${d.rows.map((r, i) => { const f = foodOf(r.f), hasU = f && f[5]; if (!hasU) r.u = 'g'; else if (!r.u) r.u = 'u';
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input data-row="${i}" data-k="f" placeholder="Tape un aliment : œuf, riz, pomme…" value="${esc(r.f)}" autocomplete="off" autocorrect="off" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input enterkeyhint="next" data-row="${i}" data-k="f" placeholder="Tape un aliment : œuf, riz, pomme…" value="${esc(r.f)}" autocomplete="off" autocorrect="off" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
     <div id="sug_${i}"></div>
-    <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
+    <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" enterkeyhint="next" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
     <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
   <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
   <div id="o_tot">${totBlock()}</div></div>
@@ -797,7 +797,7 @@ document.addEventListener('pointerdown', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
-  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } if (k === 'g' && r.f && r.g && +e.target.dataset.row === ui.draft.rows.length - 1) { keepDraft(); ui.draft.rows.push({ f: '', g: '', u: '' }); render(); const n = ui.draft.rows.length - 1; setTimeout(() => { const el = document.querySelector(`[data-row="${n}"][data-k="f"]`); if (el) el.focus(); }, 30); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
   const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
@@ -813,6 +813,18 @@ document.addEventListener('input', e => {
   if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
     if (e.target.dataset.k === 'f') { const box = document.getElementById('sug_' + i); if (box) { const sg = foodOf(e.target.value) ? [] : suggest(e.target.value); box.innerHTML = sg.length ? `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${sg.map(f => `<button class="chip" data-sug="${i}" data-name="${esc(f[0])}">${esc(f[0])}</button>`).join('')}</div>` : (e.target.value.trim().length > 2 ? '<p class="fine" style="margin:6px 0 0">Pas dans la liste : il ne sera pas compté.</p>' : ''); } } }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
+document.addEventListener('keydown', e => {
+  const t = e.target; if (e.key !== 'Enter' || !t.dataset || t.dataset.row === undefined || !ui.draft) return;
+  e.preventDefault(); const i = +t.dataset.row, k = t.dataset.k, rows = ui.draft.rows, r = rows[i];
+  const focus = (row, key) => setTimeout(() => { const el = document.querySelector(`[data-row="${row}"][data-k="${key}"]`); if (el) { el.focus(); if (el.select) el.select(); } }, 30);
+  if (k === 'f') {
+    r.f = t.value; if (!r.f.trim()) return; const had = r.g; r.u = ''; resolveRow(r); if (!r.u) { const f = foodOf(r.f); r.u = f && f[5] ? 'u' : 'g'; }
+    keepDraft(); render(); if (!had && !r.g) { focus(i, 'g'); return; }
+  } else if (k === 'g') { r.g = t.value; keepDraft(); }
+  else return;
+  if (i === rows.length - 1) { rows.push({ f: '', g: '', u: '' }); render(); }
+  focus(i + 1, 'f');
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden && PL && PL.run) { /* le minuteur continue en arrière-plan si possible */ } });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
