@@ -356,7 +356,7 @@ function slotRow(day, k, l) {
       <button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button></div>`
     : foods.length
       ? `<div class="slot" style="border-bottom:0;padding-bottom:2px"><div class="empty filled" data-act="pick" data-v="${day}|${k}|f">+</div><div class="grow" data-act="pick" data-v="${day}|${k}|f" style="cursor:pointer"><div class="lab">${l}</div><div class="small muted">${fk} kcal</div></div></div>`
-      : `<div class="slot"><div class="empty" data-act="pick" data-v="${day}|${k}">+</div><div class="grow" data-act="pick" data-v="${day}|${k}" style="cursor:pointer"><div class="lab">${l}</div><div><span class="muted">Choisir une recette ou des aliments</span></div></div></div>`;
+      : `<div class="slot"><div class="empty" data-act="pick" data-v="${day}|${k}">+</div><div class="grow" data-act="pick" data-v="${day}|${k}" style="cursor:pointer"><div class="lab">${l}</div><div><span class="muted">Ajouter des aliments ou une recette</span></div></div></div>`;
   if (!foods.length) return r ? `<div class="slotwrap">${head}<div class="addf"><button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>` : head;
   return `<div class="slotwrap">${head}<div class="flist">${foods.map((e, i) => `<div class="fline"><span class="grow">${esc(e.f)} <span class="muted">· ${esc(fQty(e))}</span></span><span class="small muted">${Math.round(fVals(e).kcal)} kcal</span><button class="heart" data-act="rmFood" data-v="${day}|${k}|${i}" aria-label="Retirer">×</button></div>`).join('')}
     <button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>`;
@@ -489,12 +489,12 @@ function vCourses() {
     ${(r.ing || []).map((i, n) => { const k = r.id + ':' + n; return `<div class="check ${S.checked[k] ? 'on' : ''}" data-act="chk" data-v="${k}"><span class="box">${S.checked[k] ? '✓' : ''}</span><span class="ctext">${esc(i)}</span></div>`; }).join('')}</div>`).join('')
     + '<button class="btn soft full" data-act="clearCourses">Tout décocher</button>';
 }
-function pickSheet(day, slot, mode = 'r') {
+function pickSheet(day, slot, mode = 'f') {
   const isB = r => r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
   const list = () => (((S.eat = S.eat || {})[day] = S.eat[day] || {})[slot] = S.eat[day][slot] || []);
   const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="done-btn" data-x>Terminé</button></div>
-    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="r">Recettes</button><button data-mode="f">Aliments</button></div>
+    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="f">Aliments</button><button data-mode="r">Recettes</button></div>
     <input type="search" data-pq autocomplete="off" enterkeyhint="search"></div>
     <div data-body></div>`);
   el.classList.add('full');
@@ -766,7 +766,7 @@ const ACT = {
   take: v => { const t = today(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
   tableSemaine: () => { ui.tableSeg = 'semaine'; ui.day = today(); go('table'); },
   sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
-  pick: v => { const [d, s, m] = v.split('|'); pickSheet(d, s, m === 'f' ? 'f' : 'r'); },
+  pick: v => { const [d, s, m] = v.split('|'); pickSheet(d, s, m === 'r' ? 'r' : 'f'); },
   rmFood: v => { const [d, k, i] = v.split('|'); const a = eatOf(d, k); a.splice(+i, 1); save(); render(); },
   unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
