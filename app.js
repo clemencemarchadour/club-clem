@@ -42,7 +42,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
 const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, recentF: [], favF: [], level: 'debute', own: [], updated: 0 });
-const DEF_L = () => ({ journal: {}, mesures: [], showMes: true });
+const DEF_L = () => ({ journal: {}, mesures: [], showMes: true, ess: [], essT: {} });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
   try { L = Object.assign(DEF_L(), JSON.parse(localStorage.getItem('cc_l_' + USER.id) || '{}')); } catch (e) { L = DEF_L(); }
@@ -253,9 +253,9 @@ const BADGES = [
   [330, 'Onze mois', 'Ta première année est toute proche. Je suis là, jusqu’au bout.', 3, '11', 'mois'],
   [365, 'Un an', "Merci de ta confiance, du fond du cœur. Ce chemin, c'est toi qui l'as tracé. 🤎", 3, '1', 'an']];
 function activeDays() {
-  const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(S.water || {}), ...Object.keys(L.journal || {})]);
+  const ks = new Set([...Object.keys(S.taken || {}), ...Object.keys(S.moves || {}), ...Object.keys(S.plan || {}), ...Object.keys(S.water || {}), ...Object.keys(L.journal || {}), ...Object.keys(L.essT || {})]);
   let n = 0;
-  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || S.moves[x] || dayHas(x) || (S.water && S.water[x]) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
+  ks.forEach(x => { if (x > today()) return; if ((S.taken[x] && Object.values(S.taken[x]).some(Boolean)) || ((L.essT || {})[x] && Object.values(L.essT[x]).some(Boolean)) || S.moves[x] || dayHas(x) || (S.water && S.water[x]) || (L.journal[x] && Object.keys(L.journal[x]).length)) n++; });
   return n;
 }
 const medal = (b, cls = '') => `<div class="med t${b[3]} ${cls}"><b>${b[4]}</b><span>${b[5]}</span></div>`;
@@ -309,15 +309,16 @@ function vJournee() {
   const mot = (C.special && C.special[md]) || C.mots[((diffDays('2026-11-09', t) % C.mots.length) + C.mots.length) % C.mots.length];
   const plan = S.plan[t] || {};
   const prises = todayPrises();
-  const done = prises.filter(p => (S.taken[t] || {})[p.id]).length;
+  const ess = essList(), nTot = prises.length + ess.length;
+  const done = prises.filter(p => (S.taken[t] || {})[p.id]).length + ess.filter(e => essOn(t, e.id)).length;
   return `${headBlock()}
   <div class="card"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
     <h2 class="mt">Bonjour${prenom() ? ' ' + esc(prenom()) : ''}</h2>
     <p class="muted" style="margin:8px 0 0">${esc(mot)}</p>
     <p class="lab mt" style="text-align:right">Le mot de Clem</p></div>
   ${nextBadgeCard()}
-  <div class="card tap ${prises.length >= 4 ? 'compact' : ''}" data-go="rituel||"><div class="row between"><span class="lab">Mon rituel</span><span class="pill">${prises.length ? done + ' / ' + prises.length : 'à configurer'}</span></div>
-    ${prises.length ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('')
+  <div class="card tap ${nTot >= 4 ? 'compact' : ''}" data-go="rituel||"><div class="row between"><span class="lab">Mon rituel</span><span class="pill">${nTot ? done + ' / ' + nTot : 'à configurer'}</span></div>
+    ${nTot ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('') + (ess.length ? `<p class="lab" style="margin:10px 0 0;font-size:10px">Mes essentiels</p>` + ess.map(e => essLine(t, e)).join('') : '')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
   <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
     ${MYSLOTS().map(([k, l]) => slotRow(t, k, l)).join('')}</div>
@@ -637,6 +638,22 @@ function todayPrises(day = today()) {
     const n = diffDays(S.mine.gut.start, day); return n < 30 || (n - 30) % 2 === 0;
   });
 }
+const ESS_M = [['matin', 'Matin'], ['midi', 'Midi'], ['soir', 'Soir'], ['coucher', 'Coucher']];
+const essList = () => (L.ess || []).slice().sort((a, b) => ESS_M.findIndex(m => m[0] === a.m) - ESS_M.findIndex(m => m[0] === b.m));
+const essOn = (t, id) => !!((L.essT || {})[t] || {})[id];
+const essLine = (t, e) => `<div class="check ${essOn(t, e.id) ? 'on' : ''}" data-act="essTake" data-v="${e.id}"><span class="box">${essOn(t, e.id) ? '✓' : ''}</span><span class="ctext grow">${esc(e.n)} <span class="small muted">· ${esc([ESS_M.find(m => m[0] === e.m)[1], e.d].filter(Boolean).join(', '))}</span></span></div>`;
+function essCard(t) {
+  const xs = essList(), f = ui.essForm;
+  return `<div class="card"><span class="lab">Mes essentiels</span>
+  <p class="small" style="margin:6px 0 4px;color:var(--txt2)">Ce que tu prends en plus de ton rituel Belles Sœurs : vitamines, magnésium, oméga 3, pilule, traitement… Ajoute-les ici pour avoir toute ta checklist du jour au même endroit. Ces infos restent uniquement sur ton téléphone.</p>
+  ${xs.map(e => `<div class="row" style="gap:6px">${essLine(t, e).replace('class="check', 'style="flex:1" class="check')}<button class="heart" data-act="essRm" data-v="${e.id}" aria-label="Retirer">×</button></div>`).join('')}
+  ${f ? `<div class="field mt"><input id="ess_n" placeholder="Ex. : magnésium, pilule…" value="${esc(f.n || '')}" autocomplete="off"></div>
+  <p class="lab mt">Quand ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${ESS_M.map(([k, l]) => `<button class="chip ${f.m === k ? 'on' : ''}" data-act="essM" data-v="${k}">${l}</button>`).join('')}</div>
+  <div class="field mt"><input id="ess_d" placeholder="Dose (facultatif) : 1 gélule, 2 comprimés…" value="${esc(f.d || '')}" autocomplete="off"></div>
+  <div class="grid2 mt"><button class="btn ghost sm" data-act="essCancel">Annuler</button><button class="btn sm" data-act="essSave">Enregistrer</button></div>`
+  : `<button class="btn ghost full mt" data-act="essOpen">+ Ajouter un essentiel</button>`}</div>`;
+}
+function keepEss() { const f = ui.essForm; if (!f) return; const n = $('#ess_n'), d = $('#ess_d'); if (n) f.n = n.value; if (d) f.d = d.value; }
 function boxDays(id, first) { return id === 'gut' && !first ? 60 : 30; }
 function stockLeft(id) {
   const m = S.mine[id]; if (!m) return null;
@@ -672,6 +689,7 @@ function vRituel() {
   ${MOMENTS.map(([m, l]) => { const xs = pr.filter(p => p.moment === m); return xs.length ? `<p class="lab mt" style="color:var(--brun)">${l}</p>` + xs.map(p => `<div class="check ${tk[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${tk[p.id] ? '✓' : ''}</span><img class="prod" src="${p.img}" alt=""><span class="ctext grow">${esc(p.name)}<br><span class="small muted">${esc(p.dose)}</span></span></div>`).join('') : ''; }).join('')}
   ${S.mine.gut && !pr.find(p => p.id === 'gut') ? '<p class="small muted mt">Gut & Balance : pas de prise aujourd’hui, on est en un jour sur deux.</p>' : ''}
   </div>
+  ${essCard(t)}
   <div class="card"><span class="lab">${cap(MOIS[new Date().getMonth()])}</span>${calendar()}</div>
   <div class="row between mt2"><h3>Mes compléments</h3><button class="link" data-go="rituel|choix|">Modifier</button></div>
   ${C.produits.filter(p => S.mine[p.id]).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">${stockLeft(p.id) > 0 ? `Stock : environ ${stockLeft(p.id)} jour${stockLeft(p.id) > 1 ? 's' : ''}` : 'Stock terminé'}</div></div><span class="muted">›</span></div>`).join('')}
@@ -770,6 +788,12 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  essTake: v => { const t = today(); const o = (L.essT = L.essT || {})[t] = L.essT[t] || {}; o[v] = !o[v]; save(); render(); },
+  essOpen: () => { ui.essForm = { m: 'matin' }; render(); setTimeout(() => { const n = $('#ess_n'); if (n) n.focus(); }, 50); },
+  essM: v => { keepEss(); ui.essForm.m = v; render(); },
+  essCancel: () => { ui.essForm = null; render(); },
+  essSave: () => { keepEss(); const f = ui.essForm; if (!f.n || !f.n.trim()) return toast('Donne un nom à ton essentiel'); (L.ess = L.ess || []).push({ id: 'e' + Date.now(), n: f.n.trim(), m: f.m || 'matin', d: (f.d || '').trim() }); ui.essForm = null; save(); render(); toast('Ajouté à ton rituel'); },
+  essRm: v => { if (!confirm('Retirer cet essentiel de ton rituel ?')) return; L.ess = (L.ess || []).filter(e => e.id !== v); save(); render(); },
   take: v => { const t = today(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
   tableSemaine: () => { ui.tableSeg = 'semaine'; ui.day = today(); go('table'); },
   sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
