@@ -518,9 +518,10 @@ function pickSheet(day, slot, mode = 'r') {
   const foodBody = () => {
     const q = pq.value.trim();
     const res = q ? suggest(q) : (S.recentF || []).map(foodOf).filter(Boolean);
-    body.innerHTML = addedHtml() + `<p class="small muted mt">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? 'Tes aliments récents :' : 'Tape un aliment : compote, pain, banane, yaourt…')}</p>
+    const resHtml = `<p class="small muted mt">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? 'Tes aliments récents :' : 'Tape un aliment : compote, pain, banane, yaourt…')}</p>
       ${res.map(f => `<div class="card tap row" data-addf="${esc(f[0])}" style="padding:10px 14px"><div class="grow"><div>${esc(f[0])}</div><div class="small muted">${f[5] ? `1 ${esc(f[6])} (${f[5]} g) · ${Math.round(f[1] * f[5] / 100)} kcal` : `100 g · ${Math.round(f[1])} kcal`}</div></div><span style="font-size:22px;color:var(--sauge-f)">+</span></div>`).join('')}
       ${q && !res.length ? '<p class="muted small center">Rien trouvé. Essaie un mot plus simple.</p>' : ''}`;
+    body.innerHTML = q ? resHtml + addedHtml() : addedHtml() + resHtml;
     body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().push({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
       S.recentF = [f[0]].concat((S.recentF || []).filter(x => x !== f[0])).slice(0, 12); save(); pq.value = ''; foodBody(); el.querySelector('.in').scrollTop = 0; });
     body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); foodBody(); });
