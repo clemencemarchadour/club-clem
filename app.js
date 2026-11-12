@@ -711,7 +711,7 @@ function vFiche(id) {
 
 /* ---------- Mon journal ---------- */
 const FEEL = [['e', 'Énergie', ['À plat', 'Fatiguée', 'Correcte', 'En forme', 'Au top']], ['s', 'Sommeil', ['Très mauvaise nuit', 'Nuit agitée', 'Nuit correcte', 'Bonne nuit', 'Nuit réparatrice']],
-  ['d', 'Digestion', ['Très inconfortable', 'Ballonnée', 'Correcte', 'Bonne', 'Ventre léger']], ['c', 'Envies de sucré', ['Irrésistibles', 'Fortes', 'Présentes', 'Légères', 'Aucune']]];
+  ['d', 'Digestion', ['Très inconfortable', 'Ballonnée', 'Correcte', 'Bonne', 'Ventre léger']], ['c', 'Sérénité face au sucré', ['Envies irrésistibles', 'Envies fortes', 'Quelques envies', 'Envies légères', 'Aucune envie']]];
 function vJournal() {
   if (ui.sub === 'guide') return vGuide();
   const d = ui.jday || today(), j = L.journal[d] || {};
