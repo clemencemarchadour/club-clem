@@ -503,14 +503,35 @@ function totBlock() {
   return `<div class="macros" style="margin-bottom:4px"><div><b>${t.kcal}</b><span>kcal</span></div><div><b>${t.p}</b><span>protéines</span></div><div><b>${t.g}</b><span>glucides</span></div><div><b>${t.l}</b><span>lipides</span></div></div><p class="fine center" style="margin:0">par portion · valeurs moyennes</p>
   ${t.miss.length ? `<p class="fine" style="color:#9b2c2c">Non compté (pas dans la liste) : ${t.miss.map(esc).join(', ')}</p>` : ''}`;
 }
+const C_KEYS = [['œuf', 'Œufs'], ['poulet', 'Poulet'], ['dinde', 'Dinde'], ['bœuf', 'Bœuf'], ['boeuf', 'Bœuf'], ['saumon', 'Saumon'], ['truite', 'Truite'], ['thon', 'Thon'], ['cabillaud', 'Cabillaud'], ['colin', 'Colin'], ['crevette', 'Crevettes'], ['jambon', 'Jambon'], ['tofu', 'Tofu'], ['skyr', 'Skyr'], ['fromage blanc', 'Fromage blanc'], ['cottage', 'Cottage cheese'], ['fromage frais', 'Fromage frais'], ['cream cheese', 'Cream cheese'], ['ricotta', 'Ricotta'], ['feta', 'Feta'], ['mozzarella', 'Mozzarella'], ['parmesan', 'Parmesan'], ['emmental', 'Emmental'], ['yaourt', 'Yaourt'], ['lait de coco', 'Lait de coco'], ['lait', 'Lait'], ['avocat', 'Avocat'], ['tomates cerises', 'Tomates cerises'], ['tomate cerise', 'Tomates cerises'], ['concombre', 'Concombre'], ['courgette', 'Courgette'], ['carotte', 'Carottes'], ['brocoli', 'Brocoli'], ['épinard', 'Épinards'], ['champignon', 'Champignons'], ['patate douce', 'Patate douce'], ['pomme de terre', 'Pommes de terre'], ['pommes de terre', 'Pommes de terre'], ['oignon nouveau', 'Oignon nouveau'], ['oignon', 'Oignons'], ['poivron', 'Poivron'], ['riz', 'Riz'], ['pâtes', 'Pâtes'], ['quinoa', 'Quinoa'], ['boulgour', 'Boulgour'], ['semoule', 'Semoule'], ['sarrasin', 'Sarrasin'], ['flocons d\'avoine', 'Flocons d\'avoine'], ['épeautre', 'Flocons de petit épeautre'], ['tortilla', 'Tortillas'], ['pain', 'Pain'], ['banane', 'Bananes'], ['pomme', 'Pommes'], ['poire', 'Poires'], ['fruits rouges', 'Fruits rouges'], ['myrtille', 'Myrtilles'], ['kiwi', 'Kiwis'], ['mangue', 'Mangue'], ['citron vert', 'Citron vert'], ['citron', 'Citron'], ['miel', 'Miel'], ['huile d\'olive', 'Huile d\'olive'], ['sauce soja', 'Sauce soja'], ['lentille', 'Lentilles'], ['pois chiche', 'Pois chiches'], ['pois cassé', 'Pois cassés'], ['haricots rouges', 'Haricots rouges'], ['haricots blancs', 'Haricots blancs'], ['haricots verts', 'Haricots verts'], ['petits pois', 'Petits pois'], ['sauce tomate', 'Sauce tomate'], ['tomates concassées', 'Tomates concassées'], ['tomate', 'Tomates'], ['chocolat', 'Chocolat noir'], ['cacao', 'Cacao']];
+function coursesLines(list) {
+  const g = new Map();
+  list.forEach(r => (r.ing || []).forEach(line => {
+    const l = String(line).toLowerCase(), alt = / ou \d|, ou /.test(l), head = l.split(',')[0];
+    const k = alt ? null : (C_KEYS.find(([w]) => head.includes(w)) || null);
+    const key = k ? k[1] : line.trim().replace(/^./, c => c.toUpperCase());
+    if (!g.has(key)) g.set(key, { label: key, raw: [], gr: 0, allG: true, n: 0, merged: !!k, rec: new Set() });
+    const e = g.get(key); e.rec.add(r.t);
+    if (!e.raw.includes(line)) e.raw.push(line); else if (!k) return;
+    const m = l.match(/(\d+(?:[.,]\d+)?)\s*(kg|g)\b/), c = l.match(/^(\d+)\s/);
+    if (key === 'Œufs' && c) e.n += +c[1]; else if (m) e.gr += parseFloat(m[1].replace(',', '.')) * (m[2] === 'kg' ? 1000 : 1); else e.allG = false;
+  }));
+  return [...g.values()].map(e => ({ ...e, qty: e.merged ? (e.label === 'Œufs' && e.n ? `${e.n} au total` : e.allG && e.gr ? `${e.gr >= 1000 ? (e.gr / 1000).toString().replace('.', ',') + ' kg' : Math.round(e.gr) + ' g'} au total` : '') : '' }))
+    .sort((a, b) => (b.merged - a.merged) || a.label.localeCompare(b.label, 'fr'));
+}
 function vCourses() {
   const t = today(), ids = new Set(S.extra);
   for (let i = 0; i < 7; i++) Object.values(S.plan[addDays(t, i)] || {}).forEach(id => ids.add(id));
-  const list = [...ids].map(R).filter(Boolean);
-  if (!list.length) return '<div class="card center"><p class="muted">Ta liste est vide. Ajoute des recettes à ta semaine ou appuie sur « + Courses » dans une recette.</p></div>';
-  return list.map(r => `<div class="card"><div class="row between"><span class="serif" style="font-size:17px">${esc(r.t)}</span>${S.extra.includes(r.id) ? `<button class="heart" data-act="rmCourses" data-v="${r.id}">×</button>` : ''}</div>
-    ${(r.ing || []).map((i, n) => { const k = r.id + ':' + n; return `<div class="check ${S.checked[k] ? 'on' : ''}" data-act="chk" data-v="${k}"><span class="box">${S.checked[k] ? '✓' : ''}</span><span class="ctext">${esc(i)}</span></div>`; }).join('')}</div>`).join('')
-    + '<button class="btn soft full" data-act="clearCourses">Tout décocher</button>';
+  const list = [...ids].map(R).filter(Boolean), mine = S.cMine || (S.cMine = []);
+  const lines = coursesLines(list);
+  const own = `<div class="card"><span class="lab">À ajouter à la main</span>
+    <div class="row" style="gap:8px;margin-top:10px"><input id="cAdd" placeholder="Ex. : éponges, café, lait…" autocomplete="off" enterkeyhint="done" style="flex:1"><button class="btn" data-act="cAdd" style="flex:none;width:52px;height:52px;padding:0;border-radius:50%;font-size:24px;margin:0">+</button></div>
+    ${mine.map((x, i) => `<div class="row" style="gap:6px"><div class="check ${x.d ? 'on' : ''}" data-act="cTog" data-v="${i}" style="flex:1"><span class="box">${x.d ? '✓' : ''}</span><span class="ctext">${esc(x.t)}</span></div><button class="heart" data-act="cRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('')}</div>`;
+  const rec = list.length ? `<div class="card"><span class="lab">Pour mes recettes</span>
+    ${lines.map(e => { const k = 'g:' + e.label; return `<div class="check ${S.checked[k] ? 'on' : ''}" data-act="chk" data-v="${esc(k)}"><span class="box">${S.checked[k] ? '✓' : ''}</span><span class="ctext grow">${e.merged ? `<b style="font-weight:500">${esc(e.label)}</b>${e.qty ? ` <span class="small muted">· ${esc(e.qty)}</span>` : ''}${e.raw.length > 1 || e.rec.size > 1 || !e.qty ? `<br><span class="small muted">${e.raw.map(esc).join(' · ')}</span>` : ''}` : esc(e.label)}</span></div>`; }).join('')}</div>
+    <div class="card"><span class="lab">Recettes de ma liste</span>${list.map(r => `<div class="row between" style="padding:6px 0"><span class="small">${esc(r.t)}</span>${S.extra.includes(r.id) ? `<button class="heart" data-act="rmCourses" data-v="${r.id}">×</button>` : '<span class="small muted">au menu</span>'}</div>`).join('')}</div>`
+    : '<div class="card center"><p class="muted">Ajoute des recettes à ta semaine ou appuie sur « + Courses » dans une recette : leurs ingrédients s\'ajoutent ici automatiquement.</p></div>';
+  return own + rec + '<button class="btn soft full" data-act="clearCourses">Tout décocher</button>';
 }
 function pickSheet(day, slot, mode = 'f') {
   const isB = r => r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
@@ -848,7 +869,10 @@ const ACT = {
   addCourses: v => { if (!S.extra.includes(v)) S.extra.push(v); save(); toast('Ajouté à tes courses'); },
   rmCourses: v => { S.extra = S.extra.filter(x => x !== v); save(); render(); },
   chk: v => { S.checked[v] = !S.checked[v]; save(); render(); },
-  clearCourses: () => { S.checked = {}; save(); render(); },
+  clearCourses: () => { S.checked = {}; (S.cMine || []).forEach(x => x.d = false); save(); render(); },
+  cAdd: () => { const i = $('#cAdd'); const v = i && i.value.trim(); if (!v) return; (S.cMine = S.cMine || []).push({ t: v, d: false }); save(); render(); setTimeout(() => { const n = $('#cAdd'); if (n) n.focus(); }, 30); },
+  cTog: v => { const x = (S.cMine || [])[+v]; if (x) { x.d = !x.d; save(); render(); } },
+  cRm: v => { (S.cMine || []).splice(+v, 1); save(); render(); },
   saveOwn: () => {
     const d = ui.draft; d.t = $('#o_t').value.trim(); d.steps = $('#o_steps').value; d.pers = $('#o_pers').value;
     if (!d.t) { toast('Donne un nom à ta recette'); return; }
@@ -946,6 +970,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'rq') { e.target.blur(); return; }
+  if (e.key === 'Enter' && e.target.id === 'cAdd') { e.preventDefault(); ACT.cAdd(); return; }
   const t = e.target; if (e.key !== 'Enter' || !t.dataset || t.dataset.row === undefined || !ui.draft) return;
   e.preventDefault(); const i = +t.dataset.row, k = t.dataset.k, rows = ui.draft.rows, r = rows[i];
   const focus = (row, key) => setTimeout(() => { const el = document.querySelector(`[data-row="${row}"][data-k="${key}"]`); if (el) { el.focus(); if (el.select) el.select(); } }, 30);
