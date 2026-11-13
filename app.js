@@ -267,7 +267,7 @@ function motDuJour() {
   return (C.special && C.special[md]) || C.mots[((diffDays('2026-11-09', t) % C.mots.length) + C.mots.length) % C.mots.length];
 }
 function showMot() {
-  if (L.motSeen === today() || document.querySelector('.bmodal')) return;
+  if (L.motSeen === today() || document.querySelector('.bmodal') || Object.values(S.badges || {}).includes(today())) return;
   L.motSeen = today(); save();
   const h = new Date().getHours(), p = prenom();
   const hi = (h < 12 ? 'Bonjour' : h < 18 ? 'Bel après-midi' : 'Bonsoir') + (p ? ' ' + p : '');
