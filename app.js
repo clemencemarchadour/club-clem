@@ -359,8 +359,11 @@ function waterCard(t) {
 }
 const eatOf = (day, k) => ((S.eat || {})[day] || {})[k] || [];
 const fGrams = e => { const f = foodOf(e.f); const q = +e.q || 0; return f && e.u === 'u' && f[5] ? q * f[5] : q; };
-const fVals = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
-const fQty = e => { const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${f[6]}${+e.q > 1 && f[6].length < 12 ? 's' : ''}` : `${q} g`; };
+const OUT_W = [['resto', 'Resto'], ['amis', 'Chez des amis ou en famille'], ['emporter', 'À emporter']], OUT_S = [['leger', 'Léger', 500, 'une salade composée, un poisson et des légumes…'], ['normal', 'Normal', 800, 'un plat et un dessert, ou une entrée et un plat'], ['copieux', 'Copieux', 1100, 'entrée, plat, dessert, un verre de vin…']];
+const fVals = e => { if (e.out) { const o = OUT_S.find(x => x[0] === e.out.s); return { kcal: o ? o[2] : 0, p: 0, g: 0, l: 0 }; }
+  return fVals0(e); };
+const fVals0 = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
+const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${f[6]}${+e.q > 1 && f[6].length < 12 ? 's' : ''}` : `${q} g`; };
 function dayTotal(day) {
   const plan = S.plan[day] || {}, tot = { kcal: 0, p: 0, g: 0, l: 0 };
   SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
@@ -514,7 +517,7 @@ function pickSheet(day, slot, mode = 'f') {
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
   const list = () => (((S.eat = S.eat || {})[day] = S.eat[day] || {})[slot] = S.eat[day][slot] || []);
   const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="done-btn" data-x>Terminé</button></div>
-    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="f">Aliments</button><button data-mode="r">Recettes</button></div>
+    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="f">Aliments</button><button data-mode="r">Recettes</button><button data-mode="o">Dehors</button></div>
     <input type="search" data-pq autocomplete="off" enterkeyhint="search"></div>
     <div data-body></div>`);
   el.classList.add('full');
@@ -531,7 +534,7 @@ function pickSheet(day, slot, mode = 'f') {
   };
   const addedHtml = () => { const a = list(); if (!a.length) return ''; const k = Math.round(a.reduce((x, e) => x + fVals(e).kcal, 0));
     return `<div class="card" style="padding:12px 14px"><div class="row between"><span class="lab">Dans ce repas</span><span class="small muted">${k} kcal</span></div>
-    ${a.map((e, i) => { const f = foodOf(e.f) || []; return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div>
+    ${a.map((e, i) => { if (e.out) return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div><div class="small muted" style="margin-top:4px">environ ${Math.round(fVals(e).kcal)} kcal · estimation</div></div>`; const f = foodOf(e.f) || []; return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div>
       <div class="row" style="gap:8px;margin-top:6px"><button class="stp" data-st="${i}|-1">−</button><input inputmode="decimal" data-q="${i}" value="${esc(String(e.q).replace('.', ','))}" style="flex:1;text-align:center;padding:8px">
       <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
       <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
@@ -555,7 +558,18 @@ function pickSheet(day, slot, mode = 'f') {
     body.querySelectorAll('[data-q]').forEach(b => b.onchange = () => { const v = parseFloat(b.value.replace(',', '.')); if (v > 0) { list()[+b.dataset.q].q = v; save(); } foodBody(); });
     body.querySelectorAll('[data-u]').forEach(b => b.onchange = () => { const e = list()[+b.dataset.u], f = foodOf(e.f); e.u = b.value; e.q = e.u === 'u' ? 1 : (f && f[5]) || 100; save(); foodBody(); });
   };
-  const setMode = m => { mode = m; el.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); pq.value = ''; pq.placeholder = m === 'f' ? 'Rechercher un aliment : compote, pain…' : 'Rechercher : poulet, avocat, pancakes…'; (m === 'f' ? foodBody : recBody)(); };
+  let ow = 'resto';
+  const outBody = () => {
+    body.innerHTML = `<div class="card mt" style="padding:16px"><h3 class="serif" style="margin:0 0 4px;font-size:21px">J'ai mangé dehors</h3>
+    <p class="lab mt">Où ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${OUT_W.map(([k, l]) => `<button class="chip ${ow === k ? 'on' : ''}" data-ow="${k}">${l}</button>`).join('')}</div>
+    <p class="lab mt">Comment ?</p>${OUT_S.map(([k, l, kc, ex]) => `<div class="card tap row" data-os="${k}" style="padding:12px 14px;margin:8px 0 0"><div class="grow"><div>${l} <span class="small muted">· environ ${kc.toLocaleString('fr-FR')} kcal</span></div><div class="small muted">${ex}</div></div><span style="font-size:22px;color:var(--sauge-f)">+</span></div>`).join('')}
+    <p class="small" style="margin:14px 0 0;color:var(--txt2)">Une simple estimation, pour garder le fil de ta journée. Un dîner entre amis ou au resto, ça se savoure sans culpabiliser : c'est aussi ça, l'équilibre.</p></div>` + addedHtml().replace('Ajoute tous tes aliments, puis touche', 'Touche');
+    body.querySelectorAll('[data-ow]').forEach(b => b.onclick = () => { ow = b.dataset.ow; outBody(); });
+    body.querySelectorAll('[data-os]').forEach(b => b.onclick = () => { const w = OUT_W.find(x => x[0] === ow), o = OUT_S.find(x => x[0] === b.dataset.os);
+      list().push({ f: `🍽 ${{ resto: 'Resto', amis: 'Chez des amis', emporter: 'À emporter' }[ow]} · ${o[1].toLowerCase()}`, out: { w: ow, s: o[0] } }); save(); done(); toast('Repas enregistré'); });
+    body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); outBody(); });
+  };
+  const setMode = m => { mode = m; el.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); pq.value = ''; pq.style.display = m === 'o' ? 'none' : ''; pq.placeholder = m === 'f' ? 'Rechercher un aliment : compote, pain…' : 'Rechercher : poulet, avocat, pancakes…'; (m === 'f' ? foodBody : m === 'o' ? outBody : recBody)(); };
   el.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   pq.oninput = () => { (mode === 'f' ? foodBody : recBody)(); el.querySelector('.in').scrollTop = 0; };
   pq.onkeydown = e => { if (e.key === 'Enter') pq.blur(); };
