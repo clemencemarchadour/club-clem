@@ -19,7 +19,9 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
 const SPORTS = ['Marche', 'Course', 'Vélo', 'Natation', 'Yoga', 'Pilates', 'Renfo / salle', 'Danse', 'Cours collectif', 'Autre'];
 const LEVELS = { debute: ['Je débute', 30, 30], reprends: ['Je reprends', 40, 20], aise: ["Je suis à l'aise", 45, 15] };
 const SLOTS = [['b', 'Petit-déj'], ['l', 'Midi'], ['s', 'En-cas'], ['d', 'Soir']];
-const MYSLOTS = () => SLOTS.filter(([k]) => !(S.hide || []).includes(k));
+const slotUsed = (d, k) => !!((S.plan[d] || {})[k] || eatOf(d, k).length);
+const MYSLOTS = d => SLOTS.filter(([k]) => !(S.hide || []).includes(k) || (d && slotUsed(d, k)));
+const hiddenAdd = d => { const h = SLOTS.filter(([k]) => (S.hide || []).includes(k) && !slotUsed(d, k)); return h.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;padding-top:10px"><span class="small muted">Ajouter aujourd'hui :</span>${h.map(([k, l]) => `<button class="chip" style="padding:6px 12px" data-act="pick" data-v="${d}|${k}">+ ${l}</button>`).join('')}</div>` : ''; };
 const slotChips = () => `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${SLOTS.map(([k, l]) => `<button class="chip ${(S.hide || []).includes(k) ? '' : 'on'}" data-act="slotToggle" data-v="${k}">${l}</button>`).join('')}</div>`;
 const MOMENTS = [['matin', 'Le matin'], ['repas', 'Avant ton plus gros repas'], ['soir', 'Au dîner'], ['coucher', 'Au coucher']];
 
@@ -321,7 +323,7 @@ function vJournee() {
     ${nTot ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('') + (ess.length ? `<p class="lab" style="margin:10px 0 0;font-size:10px">Mes essentiels</p>` + ess.map(e => essLine(t, e)).join('') : '')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
   <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
-    ${MYSLOTS().map(([k, l]) => slotRow(t, k, l)).join('')}</div>
+    ${MYSLOTS(t).map(([k, l]) => slotRow(t, k, l)).join('')}${hiddenAdd(t)}</div>
   ${waterCard(t)}
   <div class="grid2">
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
@@ -378,7 +380,7 @@ function vSemaine() {
   const plan = S.plan[ui.day] || {};
   const tot = dayTotal(ui.day);
   return `<div class="days">${days.map(d => { const x = parse(d); return `<div class="day ${d === ui.day ? 'on' : ''} ${dayHas(d) ? 'has' : ''}" data-act="day" data-v="${d}"><span>${JOURS[x.getDay()].slice(0, 3)}</span><b>${x.getDate()}</b></div>`; }).join('')}</div>
-  <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${MYSLOTS().map(([k, l]) => slotRow(ui.day, k, l)).join('')}</div>
+  <div class="card"><span class="lab">${esc(longDate(ui.day))}</span>${MYSLOTS(ui.day).map(([k, l]) => slotRow(ui.day, k, l)).join('')}${hiddenAdd(ui.day).replace("Ajouter aujourd'hui", 'Ajouter ce jour-là')}</div>
   <div class="card"><span class="lab">Total de la journée</span>
     <div class="macros"><div><b>${tot.kcal}</b><span>kcal</span></div><div><b>${tot.p}</b><span>protéines</span></div><div><b>${tot.g}</b><span>glucides</span></div><div><b>${tot.l}</b><span>lipides</span></div></div>
     <p class="fine" style="margin:0">Des repères, pas un régime : écoute ta faim et adapte les portions.</p></div>
