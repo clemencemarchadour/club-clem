@@ -517,7 +517,7 @@ function pickSheet(day, slot, mode = 'f') {
   const opts = C.recipes.concat(S.own).filter(r => slot === 'b' ? isB(r) : slot === 's' ? (isB(r) || r.cat === 'dessert' || r.cat === 'encas') : (!isB(r) && r.cat !== 'encas'));
   const list = () => (((S.eat = S.eat || {})[day] = S.eat[day] || {})[slot] = S.eat[day][slot] || []);
   const el = sheet(`<div class="shead"><div class="row between"><h3>${SLOTS.find(s => s[0] === slot)[1]} · ${esc(longDate(day))}</h3><button class="done-btn" data-x>Terminé</button></div>
-    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="f">Aliments</button><button data-mode="r">Recettes</button><button data-mode="o">Dehors</button></div>
+    <div class="seg mini" style="margin:6px 0 8px"><button data-mode="f">Aliments</button><button data-mode="r">Recettes</button><button data-mode="o">Sorties</button></div>
     <input type="search" data-pq autocomplete="off" enterkeyhint="search"></div>
     <div data-body></div>`);
   el.classList.add('full');
