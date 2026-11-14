@@ -266,8 +266,8 @@ function motDuJour() {
   const t = today(), d = new Date(), md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   return (C.special && C.special[md]) || C.mots[((diffDays('2026-11-09', t) % C.mots.length) + C.mots.length) % C.mots.length];
 }
-function showMot() {
-  if (L.motSeen === today() || document.querySelector('.bmodal') || Object.values(S.badges || {}).includes(today())) return;
+function showMot(after) {
+  if (L.motSeen === today() || document.querySelector('.bmodal')) return after && after();
   L.motSeen = today(); save();
   const h = new Date().getHours(), p = prenom();
   const hi = (h < 12 ? 'Bonjour' : h < 18 ? 'Bel après-midi' : 'Bonsoir') + (p ? ' ' + p : '');
@@ -276,22 +276,21 @@ function showMot() {
   <h2 class="serif" style="font-size:28px;margin:14px 0 0">${esc(hi)}</h2><p class="bmot">« ${esc(motDuJour())} »</p><p class="lab" style="margin:10px 0 24px">Clem 🤎</p>
   <button class="btn full" id="bok">Merci Clem</button></div>`;
   document.body.appendChild(o);
-  o.querySelector('#bok').onclick = () => o.remove();
+  o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
 }
 function checkBadges() {
   if (!S || !L || badgeShown) return;
   S.badges = S.badges || {};
   const n = activeDays(), news = BADGES.filter(b => n >= b[0] && !S.badges[b[0]]);
   if (!news.length) return showMot();
-  const motVu = L.motSeen === today();
-  L.motSeen = today();
+  if (L.motSeen !== today()) return showMot(checkBadges);
   news.forEach(b => S.badges[b[0]] = today()); save();
   const b = news[news.length - 1], nx = BADGES.find(x => x[0] > b[0]);
   badgeShown = true;
   const o = document.createElement('div'); o.className = 'bmodal';
   o.innerHTML = `<div class="bbox"><span class="lab" style="color:var(--sauge-f)">Nouveau badge</span><div class="bd big">${medal(b)}</div>
-  <h2 class="serif" style="font-size:30px;margin:22px 0 0">${esc(b[1])}</h2>${motVu ? `<p class="muted" style="margin:12px 0 24px">Bravo, tu viens de débloquer ton badge du jour 🤎</p>` : `<p class="bmot">« ${esc(b[2])} »</p><p class="lab" style="margin:10px 0 24px">Clem 🤎</p>`}
-  <button class="btn full" id="bok">${motVu ? 'Merci' : 'Merci Clem'}</button>${nx ? `<p class="small muted" style="margin-top:14px">Prochain badge à ton ${nx[0] < 30 ? nx[0] + 'e jour actif' : nx[0] === 30 ? '1er mois' : nx[4] + (nx[5] === 'an' ? ' an' : ' mois')}</p>` : ''}</div>`;
+  <h2 class="serif" style="font-size:30px;margin:22px 0 0">${esc(b[1])}</h2><p class="muted" style="margin:12px 0 24px">Bravo, tu viens de débloquer un nouveau badge 🤎</p>
+  <button class="btn full" id="bok">Merci</button>${nx ? `<p class="small muted" style="margin-top:14px">Prochain badge à ton ${nx[0] < 30 ? nx[0] + 'e jour actif' : nx[0] === 30 ? '1er mois' : nx[4] + (nx[5] === 'an' ? ' an' : ' mois')}</p>` : ''}</div>`;
   document.body.appendChild(o);
   o.querySelector('#bok').onclick = () => { o.remove(); badgeShown = false; };
 }
