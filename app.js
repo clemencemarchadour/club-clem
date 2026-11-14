@@ -65,7 +65,7 @@ async function pullRemote() {
 
 /* ---------- utilitaires UI ---------- */
 function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800); }
-function go(tab, sub = null, arg = null) { stopTimer(); ui.tab = tab; ui.sub = sub; ui.arg = arg; render(); window.scrollTo(0, 0); }
+function go(tab, sub = null, arg = null) { stopTimer(); if (tab !== 'journee') ui.jd = null; ui.tab = tab; ui.sub = sub; ui.arg = arg; render(); window.scrollTo(0, 0); }
 function sheet(html, onmount) {
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="in"><div class="wrapi">${html}</div></div>`;
@@ -322,31 +322,36 @@ function streak() {
   while (active(d)) { n++; d = addDays(d, -1); }
   return n;
 }
+const JD = () => ui.tab === 'journee' && ui.jd && ui.jd === addDays(today(), -1) ? ui.jd : today();
 function vJournee() {
-  const t = today(), d = new Date();
+  const t = JD(), d = new Date(), yest = t !== today();
   const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const mot = motDuJour();
   const plan = S.plan[t] || {};
-  const prises = todayPrises();
+  const prises = todayPrises(t);
   const ess = essList(), nTot = prises.length + ess.length;
   const done = prises.filter(p => (S.taken[t] || {})[p.id]).length + ess.filter(e => essOn(t, e.id)).length;
+  const nav = `<div class="row between" style="margin:0 0 10px">${yest ? `<span class="lab">Ma journée d'hier</span><button class="link" data-act="jdGo" data-v="0">Aujourd'hui ›</button>` : `<button class="link" data-act="jdGo" data-v="-1">‹ Compléter hier</button><span></span>`}</div>`;
   return `${headBlock()}
-  <div class="card"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
+  ${nav}
+  ${yest ? `<div class="card" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
+    <h2 class="mt">Ta journée d'hier</h2>
+    <p class="muted" style="margin:8px 0 0">Tu as oublié de noter quelque chose ? Coche ton rituel, ajoute tes repas, tes verres d'eau ou ton activité d'hier.</p></div>` : `<div class="card"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
     <h2 class="mt">Bonjour${prenom() ? ' ' + esc(prenom()) : ''}</h2>
     <p class="muted" style="margin:8px 0 0">${esc(mot)}</p>
     <p class="lab mt" style="text-align:right">Le mot de Clem</p></div>
-  ${nextBadgeCard()}
+  ${nextBadgeCard()}`}
   <div class="card tap ${nTot >= 4 ? 'compact' : ''}" data-go="rituel||"><div class="row between"><span class="lab">Mon rituel</span><span class="pill">${nTot ? done + ' / ' + nTot : 'à configurer'}</span></div>
     ${nTot ? prises.map(p => `<div class="check ${(S.taken[t] || {})[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${(S.taken[t] || {})[p.id] ? '✓' : ''}</span><span class="ctext grow">${esc(p.name)} <span class="small muted">· ${esc(p.dose)}</span></span></div>`).join('') + (ess.length ? `<p class="lab" style="margin:10px 0 0;font-size:10px">Mes essentiels</p>` + ess.map(e => essLine(t, e)).join('') : '')
       : '<p class="muted small" style="margin:8px 0 0">Choisis tes compléments pour retrouver tes prises du jour ici.</p>'}</div>
-  <div class="card"><div class="row between"><span class="lab">Au menu aujourd'hui</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
+  <div class="card"><div class="row between"><span class="lab">Au menu ${yest ? 'hier' : "aujourd'hui"}</span><button class="link" data-act="tableSemaine">Ma semaine</button></div>
     ${MYSLOTS(t).map(([k, l]) => slotRow(t, k, l)).join('')}${hiddenAdd(t)}</div>
   ${waterCard(t)}
-  <div class="grid2">
+  ${yest ? actsCard(t) + `<button class="btn ghost full" data-act="jdGo" data-v="0">Revenir à aujourd'hui</button>` : `<div class="grid2">
     <div class="card tap" data-go="bouger||" style="margin:0"><span class="lab">Bouger</span><div class="serif" style="font-size:28px;margin-top:6px">${S.moves[t] || 0} min</div><div class="small muted">aujourd'hui</div></div>
     ${activeCard()}
   </div>
-  <div class="card tap" data-act="sucre"><span class="lab">Un petit creux ?</span><h3 class="mt">Mes en-cas salés et sucrés</h3><p class="small muted" style="margin:4px 0 0">De quoi tenir jusqu'au prochain repas, sans culpabiliser.</p></div>`;
+  <div class="card tap" data-act="sucre"><span class="lab">Un petit creux ?</span><h3 class="mt">Mes en-cas salés et sucrés</h3><p class="small muted" style="margin:4px 0 0">De quoi tenir jusqu'au prochain repas, sans culpabiliser.</p></div>`}`;
 }
 const GLASS = on => `<svg viewBox="0 0 24 30" width="26" height="32"><path d="M3 3h18l-2.2 23.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z" fill="${on ? 'var(--sauge-c)' : 'none'}" stroke="${on ? 'var(--sauge)' : 'var(--filet)'}" stroke-width="1.6" stroke-linejoin="round"/>${on ? '<path d="M5.2 11h13.6l-1.5 15.2a1.2 1.2 0 0 1-1.2 1H7.9a1.2 1.2 0 0 1-1.2-1z" fill="var(--sauge)"/>' : ''}</svg>`;
 function waterCard(t) {
@@ -620,7 +625,7 @@ function vBouger() {
 }
 function actsCard(t) {
   const xs = (S.acts && S.acts[t]) || [], f = ui.actForm, tot = xs.reduce((a, x) => a + (+x.m || 0), 0);
-  return `<div class="card acts"><div class="row between" style="align-items:center"><h3 class="serif" style="margin:0 0 4px;font-size:22px">J'ai bougé aujourd'hui</h3>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
+  return `<div class="card acts"><div class="row between" style="align-items:center"><h3 class="serif" style="margin:0 0 4px;font-size:22px">J'ai bougé ${t === today() ? "aujourd'hui" : 'hier'}</h3>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
   ${xs.length ? xs.map((x, i) => `<div class="actline"><span class="actok">✓</span><span class="grow">${esc(x.a)}</span><b>${x.m} min</b><button class="heart" data-act="actRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('') : (f ? '' : '<p class="small" style="margin:0 0 4px;color:var(--txt2)">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
   ${f ? `<p class="lab mt">Qu'as-tu fait ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${SPORTS.map(a => `<button class="chip ${f.a === a ? 'on' : ''}" data-act="actA" data-v="${a}">${a}</button>`).join('')}</div>
   ${f.a === 'Autre' ? `<div class="field mt"><input id="act_o" placeholder="Ex. : tennis, randonnée…" value="${esc(f.o || '')}"></div>` : ''}
@@ -859,13 +864,13 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
-  essTake: v => { const t = today(); const o = (L.essT = L.essT || {})[t] = L.essT[t] || {}; o[v] = !o[v]; save(); render(); },
+  essTake: v => { const t = JD(); const o = (L.essT = L.essT || {})[t] = L.essT[t] || {}; o[v] = !o[v]; save(); render(); },
   essOpen: () => { ui.essForm = { m: 'matin' }; render(); setTimeout(() => { const n = $('#ess_n'); if (n) n.focus(); }, 50); },
   essM: v => { keepEss(); ui.essForm.m = v; render(); },
   essCancel: () => { ui.essForm = null; render(); },
   essSave: () => { keepEss(); const f = ui.essForm; if (!f.n || !f.n.trim()) return toast('Donne un nom à ton essentiel'); (L.ess = L.ess || []).push({ id: 'e' + Date.now(), n: f.n.trim(), m: f.m || 'matin', d: (f.d || '').trim() }); ui.essForm = null; save(); render(); toast('Ajouté à ton rituel'); },
   essRm: v => { if (!confirm('Retirer cet essentiel de ton rituel ?')) return; L.ess = (L.ess || []).filter(e => e.id !== v); save(); render(); },
-  take: v => { const t = today(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
+  take: v => { const t = JD(); (S.taken[t] = S.taken[t] || {})[v] = !S.taken[t][v]; save(); render(); },
   tableSemaine: () => { ui.tableSeg = 'semaine'; ui.day = today(); go('table'); },
   sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
   pick: v => { const [d, s, m] = v.split('|'); pickSheet(d, s, m === 'r' ? 'r' : 'f'); },
@@ -906,21 +911,21 @@ const ACT = {
   rmRow: v => { keepDraft(); ui.draft.rows.splice(+v, 1); if (!ui.draft.rows.length) ui.draft.rows.push({ f: '', g: '', u: '' }); render(); },
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
-  water: v => { const t = today(); S.water = S.water || {}; const n = S.water[t] || 0; S.water[t] = +v === n ? n - 1 : +v; save(); render(); },
+  water: v => { const t = JD(); S.water = S.water || {}; const n = S.water[t] || 0; S.water[t] = +v === n ? n - 1 : +v; save(); render(); },
   five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
   actM: v => { keepAct(); ui.actForm.m = v; render(); },
   actSave: () => {
-    keepAct(); const f = ui.actForm, t = today();
+    keepAct(); const f = ui.actForm, t = JD();
     const a = f.a === 'Autre' ? (f.o || '').trim() || 'Autre activité' : f.a, m = parseInt(f.m);
     if (!f.a) { toast('Choisis ton activité'); return; }
     if (!m || m < 1 || m > 600) { toast('Indique la durée en minutes'); return; }
     S.acts = S.acts || {}; (S.acts[t] = S.acts[t] || []).push({ a, m }); S.moves[t] = (S.moves[t] || 0) + m;
     ui.actForm = null; save(); render(); toast('Activité ajoutée 🤎');
   },
-  actRm: v => { const t = today(), x = S.acts[t][+v]; if (!x) return; S.acts[t].splice(+v, 1); S.moves[t] = Math.max(0, (S.moves[t] || 0) - x.m); save(); render(); },
+  actRm: v => { const t = JD(), x = S.acts[t][+v]; if (!x) return; S.acts[t].splice(+v, 1); S.moves[t] = Math.max(0, (S.moves[t] || 0) - x.m); save(); render(); },
   level: v => { S.level = v; save(); render(); },
   pPlay: () => { if (PL.run) { stopTimer(); render(); } else { PL.run = true; ui.timer = setInterval(tick, 1000); render(); PL.run = true; } },
   pNext: () => { const seq = seqOf(PL.id), run = PL.run; stopTimer(); PL.resting = false; PL.i++; if (PL.i >= seq.length) { finishSeance(); return; } PL.left = seq[PL.i].sec; render(); if (run) ACT.pPlay(); },
@@ -940,6 +945,7 @@ const ACT = {
     const [t, sb, a] = (ui.stockFrom || 'rituel||').split('|'); go(t, sb || null, a || null); toast('Stock enregistré');
   },
   feel: v => { const [k, n] = v.split('|'), d = ui.jday || today(); const j = L.journal[d] = L.journal[d] || {}; j[k] = +n; save(); render(); },
+  jdGo: v => { ui.jd = +v ? addDays(today(), +v) : null; ui.actForm = null; render(); window.scrollTo(0, 0); },
   jday: v => { const d = addDays(ui.jday || today(), +v); if (d > today()) return; ui.jday = d; render(); },
   showMes: () => { L.showMes = !L.showMes; save(); render(); },
   saveMes: () => {
