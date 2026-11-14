@@ -279,7 +279,7 @@ function showMot(after) {
   o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
 }
 function checkBadges() {
-  if (!S || !L || badgeShown) return;
+  if (!S || !L || badgeShown || document.querySelector('.bmodal')) return;
   S.badges = S.badges || {};
   const n = activeDays(), news = BADGES.filter(b => n >= b[0] && !S.badges[b[0]]);
   if (!news.length) return showMot();
