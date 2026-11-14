@@ -572,7 +572,7 @@ function pickSheet(day, slot, mode = 'f') {
     body.innerHTML = q ? resHtml + addedHtml() : addedHtml() + resHtml;
     body.querySelectorAll('[data-fsub]').forEach(b => b.onclick = () => { fsub = b.dataset.fsub; foodBody(); });
     body.querySelectorAll('[data-favf]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const n = b.dataset.favf, fv = S.favF; const i = fv.indexOf(n); if (i >= 0) fv.splice(i, 1); else fv.unshift(n); save(); foodBody(); });
-    body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().push({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
+    body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().unshift({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
       S.recentF = [f[0]].concat((S.recentF || []).filter(x => x !== f[0])).slice(0, 12); save(); pq.value = ''; foodBody(); el.querySelector('.in').scrollTop = 0; });
     body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); foodBody(); });
     body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.st.split('|'); const e = list()[+i]; const step = e.u === 'u' ? 0.5 : 10; e.q = Math.max(step, Math.round(((+e.q || 0) + d * step) * 10) / 10); save(); foodBody(); });
