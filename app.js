@@ -121,8 +121,8 @@ function loginView(step = 'email', email = '', forced = false) {
       : `
       <h3>Ton code</h3>
       <p class="muted small">Un e-mail vient d'être envoyé à <b>${esc(email)}</b> (pense à regarder dans tes spams).</p>
-      <p class="small">Entre ci-dessous le code à 6 chiffres qu'il contient.</p>
-      <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="200" placeholder="······">
+      <p class="small">Entre ci-dessous le code qu'il contient, en entier.</p>
+      <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="200" placeholder="Ton code">
       <button class="btn full mt" id="verify">Entrer dans le Club</button>
       <details class="mt"><summary class="small" style="cursor:pointer;color:var(--txt2);text-decoration:underline">Je n'ai pas reçu de code</summary>
       <div class="small" style="margin-top:8px;line-height:1.5">Le code arrive en général en moins d'une minute, de la part de <b>Le Club Clem</b> (leclubclem@gmail.com).<br>• Regarde dans tes <b>courriers indésirables</b> ou <b>spams</b>, et dans l'onglet <b>Autres</b> si tu es sur Hotmail ou Outlook.<br>• Ajoute leclubclem@gmail.com à tes contacts, puis redemande un code.<br>• Toujours rien ? Écris-moi sur Instagram, <b>@clemence.marchadour</b>, je t'aide.</div>
@@ -156,7 +156,7 @@ function loginView(step = 'email', email = '', forced = false) {
         res = await sb.auth.verifyOtp({ token_hash: decodeURIComponent(m[1]), type: ty === 'signup' ? 'signup' : ty === 'invite' ? 'invite' : 'magiclink' });
       } else {
         const token = raw.replace(/\D/g, '');
-        if (token.length < 6) { $('#err').textContent = 'Le code fait 6 chiffres.'; return; }
+        if (token.length < 6) { $('#err').textContent = 'Le code semble incomplet : recopie-le en entier.'; return; }
         $('#verify').disabled = true;
         res = await sb.auth.verifyOtp({ email, token, type: 'email' });
       }
