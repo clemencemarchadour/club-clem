@@ -716,20 +716,27 @@ function stockLeft(id) {
   return end - diffDays(m.start, today());
 }
 function stockEnd(id) { const l = stockLeft(id); return l === null ? null : addDays(today(), l); }
+const BOXLV = [['new', "Je viens de l'ouvrir", 30], ['half', 'À peu près à moitié', 15], ['some', 'Il en reste un peu', 7], ['end', 'Presque vide', 2]];
+const lvOf = id => { const m = S.mine[id]; if (!m || m.todo) return null; const left = boxDays(id, true) - diffDays(m.start, today()); return left >= 23 ? 'new' : left >= 11 ? 'half' : left >= 5 ? 'some' : 'end'; };
+const startFor = (id, lv) => addDays(today(), -(boxDays(id, true) - (BOXLV.find(x => x[0] === lv) || BOXLV[1])[2]));
+function stockBlock(id, f) {
+  const p = P(id);
+  return `<div class="card"><div class="row" style="gap:12px;align-items:center"><img src="${p.img}" alt="" style="width:46px;height:46px;border-radius:12px;object-fit:cover"><span class="serif" style="font-size:19px">${esc(p.name)}</span></div>
+  <p class="lab mt">Où en est ta boîte ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${BOXLV.map(([v, l]) => `<button class="chip ${f.lv === v ? 'on' : ''}" data-act="stL" data-v="${id}|${v}">${l}</button>`).join('')}</div>
+  <p class="lab mt">Boîtes d'avance</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[[0, 'Aucune'], [1, '1'], [2, '2'], [3, '3 ou plus']].map(([v, l]) => `<button class="chip ${f.extra === v ? 'on' : ''}" data-act="stX" data-v="${id}|${v}">${l}</button>`).join('')}</div></div>`;
+}
+function stockForms(ids) {
+  ui.stocks = ui.stocks || {};
+  ids.forEach(id => { if (!ui.stocks[id]) { const m = S.mine[id]; ui.stocks[id] = { lv: lvOf(id), extra: m && !m.todo ? (m.extra || 0) : 0 }; } });
+  return ids.map(id => stockBlock(id, ui.stocks[id])).join('');
+}
 function vStock(id) {
-  const p = P(id), f = ui.stock || (ui.stock = { id, when: S.mine[id] ? null : 0, date: S.mine[id] ? S.mine[id].start : today(), extra: S.mine[id] ? (S.mine[id].extra || 0) : 0 });
-  const W = [[0, "Aujourd'hui"], [7, 'Il y a 1 semaine'], [14, 'Il y a 2 semaines'], [21, 'Il y a 3 semaines'], ['d', 'Je choisis la date']];
-  const start = f.when === 'd' || f.when === null ? f.date : addDays(today(), -f.when);
-  const tmp = { start, extra: f.extra }, keep = S.mine[id]; S.mine[id] = tmp; const left = stockLeft(id); if (keep) S.mine[id] = keep; else delete S.mine[id];
-  return `${back('Retour', ui.stockFrom || 'rituel')}<h2>${esc(p.name)}</h2><p class="muted small">Deux petites questions pour que je te prévienne au bon moment quand ton stock arrive à sa fin.</p>
-  <div class="card"><span class="lab">Quand as-tu commencé ta boîte actuelle ?</span>
-  <div class="chips mt" style="flex-wrap:wrap;overflow:visible">${W.map(([v, l]) => `<button class="chip ${f.when === v || (v === 'd' && f.when === null) ? 'on' : ''}" data-act="stW" data-v="${v}">${l}</button>`).join('')}</div>
-  ${f.when === 'd' || f.when === null ? `<div class="field mt"><input type="date" id="st_d" max="${today()}" value="${f.date}"></div>` : ''}</div>
-  <div class="card"><span class="lab">Combien de boîtes as-tu encore d'avance ?</span>
-  <div class="chips mt" style="flex-wrap:wrap;overflow:visible">${[[0, 'Aucune'], [1, '1 boîte'], [2, '2 boîtes'], [3, '3 boîtes ou plus']].map(([v, l]) => `<button class="chip ${f.extra === v ? 'on' : ''}" data-act="stX" data-v="${v}">${l}</button>`).join('')}</div>
-  <p class="small muted" style="margin:10px 0 0">Par exemple, avec un rituel de 3 mois, tu as 2 boîtes d'avance quand tu commences la première.</p></div>
-  <div class="card" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab" style="color:var(--sauge-f)">Ton stock</span><p style="margin:6px 0 0">${left > 0 ? `Il te reste environ <b>${left} jour${left > 1 ? 's' : ''}</b> de ${esc(p.name)}. Je te préviendrai 5 jours avant la fin.` : `Ta boîte de ${esc(p.name)} devrait être terminée. Pense à recommander !`}</p></div>
-  <button class="btn full mt" data-act="stSave">C'est bon</button>`;
+  const ids = id ? [id] : Object.keys(S.mine);
+  return `${back('Retour', ui.stockFrom || 'rituel')}<h2>${ids.length > 1 ? 'Où en sont tes boîtes ?' : 'Où en est ta boîte ?'}</h2>
+  <p class="muted small">Pas besoin de te souvenir d'une date : regarde simplement ta boîte. Je te préviendrai quelques jours avant la fin.</p>
+  ${stockForms(ids)}
+  <p class="small muted">Par exemple, avec un rituel de 3 mois, tu as 2 boîtes d'avance quand tu commences la première.</p>
+  <button class="btn full mt" data-act="stSave" data-v="${id || ''}">C'est bon</button>`;
 }
 function vRituel() {
   if (ui.sub === 'stock') return vStock(ui.arg);
@@ -740,6 +747,7 @@ function vRituel() {
   return `${headBlock()}
   ${low.map(x => `<div class="alert"><span class="lab" style="color:var(--filet)">Bientôt en rupture</span><h3 class="mt">${x.left > 0 ? `Il te reste environ ${x.left} jour${x.left > 1 ? 's' : ''} de ${esc(x.p.name)}` : `Ta boîte de ${esc(x.p.name)} doit être terminée`}</h3>
     <div class="grid2 mt"><a class="btn sm" href="${x.p.link || C.shop}" target="_blank">Je recommande chez Clem</a><button class="btn sm" style="background:transparent;color:var(--ivoire);border:1px solid var(--ivoire)" data-act="newBox" data-v="${x.p.id}">J'ai reçu ma boîte</button></div></div>`).join('')}
+  ${Object.values(S.mine).some(m => m.todo) ? `<div class="card tap" data-act="stAll" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab" style="color:var(--sauge-f)">10 secondes</span><div class="serif" style="font-size:19px;margin-top:4px">Où en sont tes boîtes ?</div><p class="small" style="margin:4px 0 0;color:var(--txt2)">Dis-moi où tu en es pour que je te prévienne avant la fin de ton stock. →</p></div>` : ''}
   <div class="card"><span class="lab">Mes prises du jour</span>
   ${MOMENTS.map(([m, l]) => { const xs = pr.filter(p => p.moment === m); return xs.length ? `<p class="lab mt" style="color:var(--brun)">${l}</p>` + xs.map(p => `<div class="check ${tk[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${tk[p.id] ? '✓' : ''}</span><img class="prod" src="${p.img}" alt=""><span class="ctext grow">${esc(p.name)}<br><span class="small muted">${esc(p.dose)}</span></span></div>`).join('') : ''; }).join('')}
   ${S.mine.gut && !pr.find(p => p.id === 'gut') ? '<p class="small muted mt">Gut & Balance : pas de prise aujourd’hui, on est en un jour sur deux.</p>' : ''}
@@ -767,7 +775,7 @@ function vChoix() {
   return `${has ? back('Mon rituel', 'rituel') : headBlock()}<h2 class="${has ? '' : 'mt'}">Quels compléments prends-tu ?</h2>
   <p class="muted small">Coche ceux que tu as commencés. Je te rappelle tes prises et je te préviens quand ta boîte arrive à sa fin.</p>
   <div class="pgrid mt">${C.produits.map(p => `<div class="card ${S.mine[p.id] ? 'on' : ''}" data-act="toggleMine" data-v="${p.id}">${S.mine[p.id] ? '<span class="tick">✓</span>' : ''}<img src="${p.img}" alt=""><div class="small" style="margin-top:6px">${esc(p.name)}</div></div>`).join('')}</div>
-  <button class="btn full mt2" data-go="rituel||">C'est bon</button>`;
+  <button class="btn full mt2" ${Object.values(S.mine).some(m => m.todo) ? 'data-act="stAll"' : 'data-go="rituel||"'}>C'est bon</button>`;
 }
 function vFiche(id) {
   const p = P(id); const sec = (l, k) => p[k] ? `<div class="card"><span class="lab">${l}</span><p style="margin:6px 0 0">${esc(cap(p[k]))}</p></div>` : '';
@@ -916,15 +924,16 @@ const ACT = {
   pNext: () => { const seq = seqOf(PL.id), run = PL.run; stopTimer(); PL.resting = false; PL.i++; if (PL.i >= seq.length) { finishSeance(); return; } PL.left = seq[PL.i].sec; render(); if (run) ACT.pPlay(); },
   pPrev: () => { const run = PL.run; stopTimer(); PL.resting = false; PL.i = Math.max(0, PL.i - 1); PL.left = seqOf(PL.id)[PL.i].sec; render(); if (run) ACT.pPlay(); },
   endSeance: () => { PL = null; go('bouger'); },
-  toggleMine: v => { if (S.mine[v]) { delete S.mine[v]; save(); render(); return; } ui.stock = null; ui.stockFrom = 'rituel|' + (ui.sub || (Object.keys(S.mine).length ? '' : 'choix')) + '|' + (ui.arg || ''); go('rituel', 'stock', v); },
-  stEdit: v => { ui.stock = null; ui.stockFrom = 'rituel|fiche|' + v; go('rituel', 'stock', v); },
-  newBox: v => { ui.stock = { id: v, when: 0, date: today(), extra: 0 }; ui.stockFrom = 'rituel||'; go('rituel', 'stock', v); },
-  stW: v => { const d = $('#st_d'); if (d && d.value) ui.stock.date = d.value; ui.stock.when = v === 'd' ? 'd' : +v; render(); },
-  stX: v => { const d = $('#st_d'); if (d && d.value) ui.stock.date = d.value; ui.stock.extra = +v; render(); },
-  stSave: () => {
-    const f = ui.stock, d = $('#st_d'); if (d && d.value) f.date = d.value > today() ? today() : d.value;
-    const start = f.when === 'd' || f.when === null ? f.date : addDays(today(), -f.when);
-    S.mine[ui.arg] = { start, extra: f.extra }; ui.stock = null; save();
+  toggleMine: v => { if (S.mine[v]) delete S.mine[v]; else S.mine[v] = { start: today(), extra: 0, todo: 1 }; save(); render(); },
+  stEdit: v => { ui.stocks = {}; ui.stockFrom = 'rituel|fiche|' + v; go('rituel', 'stock', v); },
+  stAll: () => { ui.stocks = {}; ui.stockFrom = 'rituel||'; go('rituel', 'stock', ''); },
+  newBox: v => { ui.stocks = { [v]: { lv: 'new', extra: 0 } }; ui.stockFrom = 'rituel||'; go('rituel', 'stock', v); },
+  stL: v => { const [id, lv] = v.split('|'); ui.stocks[id].lv = lv; render(); },
+  stX: v => { const [id, x] = v.split('|'); ui.stocks[id].extra = +x; render(); },
+  stSave: v => {
+    const ids = v ? [v] : Object.keys(S.mine);
+    ids.forEach(id => { const f = (ui.stocks || {})[id] || {}; S.mine[id] = { start: startFor(id, f.lv || 'half'), extra: f.extra || 0 }; });
+    ui.stocks = null; save();
     const [t, sb, a] = (ui.stockFrom || 'rituel||').split('|'); go(t, sb || null, a || null); toast('Stock enregistré');
   },
   feel: v => { const [k, n] = v.split('|'), d = ui.jday || today(); const j = L.journal[d] = L.journal[d] || {}; j[k] = +n; save(); render(); },
