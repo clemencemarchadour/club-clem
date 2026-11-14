@@ -722,18 +722,20 @@ const startFor = (id, lv) => addDays(today(), -(boxDays(id, true) - (BOXLV.find(
 function stockBlock(id, f) {
   const p = P(id);
   return `<div class="card"><div class="row" style="gap:12px;align-items:center"><img src="${p.img}" alt="" style="width:46px;height:46px;border-radius:12px;object-fit:cover"><span class="serif" style="font-size:19px">${esc(p.name)}</span></div>
-  <p class="lab mt">Où en est ta boîte ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${BOXLV.map(([v, l]) => `<button class="chip ${f.lv === v ? 'on' : ''}" data-act="stL" data-v="${id}|${v}">${l}</button>`).join('')}</div>
+  <p class="lab mt">Quand as-tu commencé cette boîte ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[['today', "Je la commence aujourd'hui"], ['date', "J'ai commencé le…"], ['lv', 'Je ne sais plus exactement']].map(([v, l]) => `<button class="chip ${f.mode === v ? 'on' : ''}" data-act="stM" data-v="${id}|${v}">${l}</button>`).join('')}</div>
+  ${f.mode === 'date' ? `<input type="date" class="mt" data-std="${id}" value="${f.d || today()}" min="${addDays(today(), -boxDays(id, true))}" max="${today()}" style="width:100%">` : ''}
+  ${f.mode === 'lv' ? `<p class="lab mt">Regarde ta boîte : où en est-elle ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${BOXLV.map(([v, l]) => `<button class="chip ${f.lv === v ? 'on' : ''}" data-act="stL" data-v="${id}|${v}">${l}</button>`).join('')}</div>` : ''}
   <p class="lab mt">Boîtes d'avance</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[[0, 'Aucune'], [1, '1'], [2, '2'], [3, '3 ou plus']].map(([v, l]) => `<button class="chip ${f.extra === v ? 'on' : ''}" data-act="stX" data-v="${id}|${v}">${l}</button>`).join('')}</div></div>`;
 }
 function stockForms(ids) {
   ui.stocks = ui.stocks || {};
-  ids.forEach(id => { if (!ui.stocks[id]) { const m = S.mine[id]; ui.stocks[id] = { lv: lvOf(id), extra: m && !m.todo ? (m.extra || 0) : 0 }; } });
+  ids.forEach(id => { if (!ui.stocks[id]) { const m = S.mine[id]; ui.stocks[id] = m && !m.todo ? { mode: m.start === today() ? 'today' : 'date', d: m.start, lv: lvOf(id), extra: m.extra || 0 } : { mode: 'today', extra: 0 }; } });
   return ids.map(id => stockBlock(id, ui.stocks[id])).join('');
 }
 function vStock(id) {
   const ids = id ? [id] : Object.keys(S.mine);
   return `${back('Retour', ui.stockFrom || 'rituel')}<h2>${ids.length > 1 ? 'Où en sont tes boîtes ?' : 'Où en est ta boîte ?'}</h2>
-  <p class="muted small">Pas besoin de te souvenir d'une date : regarde simplement ta boîte. Je te préviendrai quelques jours avant la fin.</p>
+  <p class="muted small">Je te préviendrai quelques jours avant la fin de ta boîte, pour que tu ne sois jamais à court. Si tu ne te souviens plus de la date, regarde simplement ta boîte.</p>
   ${stockForms(ids)}
   <p class="small muted">Par exemple, avec un rituel de 3 mois, tu as 2 boîtes d'avance quand tu commences la première.</p>
   <button class="btn full mt" data-act="stSave" data-v="${id || ''}">C'est bon</button>`;
@@ -927,12 +929,13 @@ const ACT = {
   toggleMine: v => { if (S.mine[v]) delete S.mine[v]; else S.mine[v] = { start: today(), extra: 0, todo: 1 }; save(); render(); },
   stEdit: v => { ui.stocks = {}; ui.stockFrom = 'rituel|fiche|' + v; go('rituel', 'stock', v); },
   stAll: () => { ui.stocks = {}; ui.stockFrom = 'rituel||'; go('rituel', 'stock', ''); },
-  newBox: v => { ui.stocks = { [v]: { lv: 'new', extra: 0 } }; ui.stockFrom = 'rituel||'; go('rituel', 'stock', v); },
+  newBox: v => { ui.stocks = { [v]: { mode: 'today', extra: 0 } }; ui.stockFrom = 'rituel||'; go('rituel', 'stock', v); },
+  stM: v => { const [id, m] = v.split('|'); const f = ui.stocks[id]; f.mode = m; if (m === 'date' && !f.d) f.d = today(); if (m === 'lv' && !f.lv) f.lv = 'half'; render(); },
   stL: v => { const [id, lv] = v.split('|'); ui.stocks[id].lv = lv; render(); },
   stX: v => { const [id, x] = v.split('|'); ui.stocks[id].extra = +x; render(); },
   stSave: v => {
     const ids = v ? [v] : Object.keys(S.mine);
-    ids.forEach(id => { const f = (ui.stocks || {})[id] || {}; S.mine[id] = { start: startFor(id, f.lv || 'half'), extra: f.extra || 0 }; });
+    ids.forEach(id => { const f = (ui.stocks || {})[id] || {}; S.mine[id] = { start: f.mode === 'date' && f.d && f.d <= today() ? f.d : f.mode === 'lv' ? startFor(id, f.lv || 'half') : today(), extra: f.extra || 0 }; });
     ui.stocks = null; save();
     const [t, sb, a] = (ui.stockFrom || 'rituel||').split('|'); go(t, sb || null, a || null); toast('Stock enregistré');
   },
@@ -967,6 +970,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } if (k === 'g' && r.f && r.g && +e.target.dataset.row === ui.draft.rows.length - 1) { keepDraft(); ui.draft.rows.push({ f: '', g: '', u: '' }); render(); const n = ui.draft.rows.length - 1; setTimeout(() => { const el = document.querySelector(`[data-row="${n}"][data-k="f"]`); if (el) el.focus(); }, 30); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.dataset && e.target.dataset.std && ui.stocks && ui.stocks[e.target.dataset.std]) { ui.stocks[e.target.dataset.std].d = e.target.value; return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
   const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
@@ -982,6 +986,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'rq') { ui.q = e.target.value; const box = document.querySelector('.rlist'); if (box) box.innerHTML = rList(filtered()); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
     if (e.target.dataset.k === 'f') { const box = document.getElementById('sug_' + i); if (box) { const sg = foodOf(e.target.value) ? [] : suggest(e.target.value); box.innerHTML = sg.length ? `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${sg.map(f => `<button class="chip" data-sug="${i}" data-name="${esc(f[0])}">${esc(f[0])}</button>`).join('')}</div>` : (e.target.value.trim().length > 2 ? '<p class="fine" style="margin:6px 0 0">Pas dans la liste : il ne sera pas compté.</p>' : ''); } } }
+  if (e.target.dataset && e.target.dataset.std && ui.stocks && ui.stocks[e.target.dataset.std]) { ui.stocks[e.target.dataset.std].d = e.target.value; return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.id === 'rq') { e.target.blur(); return; }
