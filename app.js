@@ -417,16 +417,17 @@ function filtered() {
   const all = C.recipes.concat(S.own.map(r => Object.assign({ mine: true }, r)));
   const q = norm(ui.q || '').split(/\s+/).filter(Boolean);
   return all.filter(r => !q.length || q.every(w => norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')).includes(w))).filter(r => f === 'all' || (f === 'sucre' && r.type === 'pdj' && r.cat === 'sucre') || (f === 'sale' && r.type === 'pdj' && r.cat === 'sale')
-    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && (r.cat === 'encas' || r.cat === 'dessert')) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine));
+    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && r.cat === 'encas') || (f === 'dessert' && (r.cat === 'dessert' || r.dess)) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine)).sort((a, b) => f === 'dessert' ? dw(a) - dw(b) : 0);
 }
 function vRecettes() {
-  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas et desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
+  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas'], ['dessert', 'Desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
   const list = filtered();
   return `<input type="search" id="rq" class="mt" placeholder="Rechercher : poulet, avocat, pancakes…" value="${esc(ui.q || '')}" autocomplete="off" enterkeyhint="search">
   <div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="rlist">${rList(list)}</div>
   <button class="btn ghost full mt" data-act="newOwn">+ Ajouter ma propre recette</button>`;
 }
+const dw = r => r.dess ? 2 : String(r.id).startsWith('d3_') ? 0 : 1;
 function rList(list) {
   return list.map(rCard).join('') || `<p class="muted center mt2">${ui.q ? 'Aucune recette ne correspond à ta recherche.' : 'Rien ici pour l\'instant.'}</p>`;
 }
