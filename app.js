@@ -536,21 +536,22 @@ const NUMW = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sep
 const UNITW = [[/^(kg|kilos?)$/, 1000], [/^(g|gr|grs|grammes?)$/, 1], [/^(ml)$/, 1], [/^(cl)$/, 10], [/^(l|litres?)$/, 1000], [/^(cs|cas|soupe)$/, 15], [/^(cc|cac|cafe)$/, 5], [/^(tranches?)$/, 30], [/^(bols?)$/, 250], [/^(verres?)$/, 200], [/^(poignees?)$/, 30], [/^(pots?)$/, 125], [/^(sachets?)$/, 10], [/^(carres?)$/, 10]];
 function parseMeal(txt) {
   return String(txt || '').split(/[,;\n+]|\bet\b|\bavec\b|\bpuis\b|\bplus\b/i).map(x => x.trim()).filter(Boolean).map(raw => {
-    let w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2')).replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
+    let unitWord = false, w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2')).replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
     const out = [];
     for (let i = 0; i < w.length; i++) {
       const x = w[i];
       if (/^\d+([.,]\d+)?$/.test(x)) { q = (q && q < 1 ? q : 0) + parseFloat(x.replace(',', '.')); continue; }
       if (/^\d+frac\d+$/.test(x)) { const [a, b] = x.split('frac'); q = (q || 0) + a / b; continue; }
       if (x in NUMW && out.length === 0 && !mult) { const v = NUMW[x]; q = v < 1 ? (q && q >= 1 && x !== 'demi' ? q * v : v) : (q && q < 1 ? q * v : v); if (/^quarts?$/.test(x) && w[i - 1] === 'trois') q = 0.75; continue; }
-      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult) { mult = u[1]; continue; }
+      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult && (!/^(soupe|cafe)$/.test(x) || /^(a|c|cuilleres?)$/.test(w[i - 1] || ''))) { mult = u[1]; unitWord = /^(tranches?|carres?|pots?|sachets?|poignees?)$/.test(x); continue; }
       if ((x === 'c' || x === 'cuillere' || x === 'cuilleres' || x === 'a' || x === 'la' || x === 'de' || x === 'd' || x === 'des' || x === 'du' || x === 'l') && out.length === 0) continue;
       out.push(x);
     }
     const name = out.join(' '), sg = name ? suggest(name) : [];
     if (!sg.length) return { raw, f: null };
-    let f = sg[0];
+    let f = sg.find(x => norm(x[0]).startsWith(name)) || sg[0];
     if (!mult && !f[5]) { const fu = sg.find(x => x[5] && norm(x[0]).split(' ')[0].replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')); if (fu && fu[5]) f = fu; }
+    if (mult && f[5] && unitWord) return { raw, f: f[0], q: q || 1, u: 'u' };
     if (mult) return { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
     if (f[5]) return { raw, f: f[0], q: q || 1, u: 'u' };
     if (q && q >= 20) return { raw, f: f[0], q, u: 'g' };
