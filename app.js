@@ -407,6 +407,7 @@ function frigoList() {
 }
 const frigoKeys = () => { const k = new Set(); C.recipes.concat(S.own).forEach(r => recKeys(r).forEach(x => k.add(x))); return k; };
 function vFrigo() {
+  if (S.frigoD !== today() && (S.frigo || []).length) { S.frigo = []; S.frigoD = today(); save(); }
   const have = new Set(S.frigo || []), L = frigoList(), all = frigoKeys(), fq = norm(ui.fq || '');
   const fams = Object.entries(FAM).map(([g, xs]) => [g, xs.filter(x => all.has(x))]);
   const known = new Set(Object.values(FAM).flat()); const others = [...all].filter(x => !known.has(x)).sort((a, b) => a.localeCompare(b, 'fr'));
@@ -954,7 +955,7 @@ const ACT = {
   rmFood: v => { const [d, k, i] = v.split('|'); const a = eatOf(d, k); a.splice(+i, 1); save(); render(); },
   unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
-  frigoTog: v => { const f = S.frigo || (S.frigo = []); const i = f.indexOf(v); if (i >= 0) f.splice(i, 1); else f.push(v); save(); render(); },
+  frigoTog: v => { S.frigoD = today(); const f = S.frigo || (S.frigo = []); const i = f.indexOf(v); if (i >= 0) f.splice(i, 1); else f.push(v); save(); render(); },
   frigoClear: () => { S.frigo = []; save(); render(); },
   frigoCourses: v => { const x = frigoList().find(e => String(e.r.id) === String(v)); if (!x) return; const m = S.cMine || (S.cMine = []); x.miss.forEach(t => { if (!m.some(e => e.t.toLowerCase() === t.toLowerCase())) m.push({ t, d: 0 }); }); save(); toast(x.miss.length > 1 ? 'Ajoutés à tes courses' : 'Ajouté à tes courses'); },
   day: v => { ui.day = v; render(); },
