@@ -690,9 +690,7 @@ function hush() { }
 const SOUFFLE = {
   coherence: { t: 'Cohérence cardiaque', d: '5 min', ico: '🫧', intro: "Inspire quand la bulle grandit, expire quand elle rétrécit : 5 secondes chacun, pendant 5 minutes. Idéal le matin, avant un repas ou quand le stress monte.", br: [5, 0, 5, 0], dur: 300 },
   fringale: { t: 'Respiration anti-fringale', d: '2 min', ico: '🍃', intro: "Une envie soudaine de grignoter ? Avant de foncer vers le placard, offre-toi 2 minutes. Inspire 4 secondes, retiens 2 secondes, expire lentement 6 secondes. Ensuite, demande-toi : est-ce que j'ai vraiment faim, ou besoin d'une pause ?", br: [4, 2, 6, 0], dur: 120 },
-  carre: { t: 'Respiration carrée', d: '3 min', ico: '◻️', intro: "Pour retrouver ton calme en quelques minutes. Inspire 4 secondes, retiens 4 secondes, expire 4 secondes, reste poumons vides 4 secondes. Comme si tu dessinais un carré avec ton souffle.", br: [4, 4, 4, 4], dur: 180 },
-  scan: { t: 'Scan corporel', d: '4 min', ico: '🌙', intro: "Installe-toi confortablement, assise ou allongée. Lis chaque étape, puis prends le temps de la ressentir : la suivante arrive toute seule.", steps: ["Prends conscience de ta respiration, sans chercher à la changer. Sens l'air entrer, puis sortir.", "Porte ton attention sur tes pieds. Sens leur contact avec le sol ou le lit. Laisse-les se détendre.", "Remonte vers tes jambes, tes genoux, tes cuisses. À chaque expiration, laisse-les devenir plus lourdes.", "Observe ton ventre. Laisse-le se gonfler doucement à l'inspiration, sans le retenir.", "Relâche tes épaules. Laisse-les descendre, loin de tes oreilles.", "Détends ta mâchoire, ton front, le petit espace entre tes sourcils.", "Ressens ton corps dans son ensemble, détendu et posé. Prends une grande inspiration, et reviens doucement."], step: 35 },
-  ancrage: { t: 'Ancrage avant le repas', d: '1 min', ico: '🌿', intro: "Une minute pour passer en mode « je savoure » avant de manger, plutôt que de manger en pilote automatique.", steps: ["Pose tes deux pieds bien à plat. Prends trois respirations lentes.", "Regarde ton assiette : les couleurs, les textures, les odeurs.", "Demande-toi : quelle est ma faim, de 1 à 10 ?", "Prends ta première bouchée lentement, en posant ta fourchette entre chaque bouchée."], step: 15 }
+  carre: { t: 'Respiration carrée', d: '3 min', ico: '◻️', intro: "Pour retrouver ton calme en quelques minutes. Inspire 4 secondes, retiens 4 secondes, expire 4 secondes, reste poumons vides 4 secondes. Comme si tu dessinais un carré avec ton souffle.", br: [4, 4, 4, 4], dur: 180 }
 };
 function vSouffle(id) {
   const x = SOUFFLE[id]; if (!x) return vBouger();
@@ -754,7 +752,7 @@ function vBouger() {
   <div class="chips lvl">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
   ${groups.map(([g, l]) => `<h3 class="mt2" id="g_${g}">${l}</h3>${Object.entries(C.seances).filter(([, s]) => s.g === g).map(([id, s]) => seanceCard(id, s)).join('')}`).join('')}
   <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>`)}
-  ${fold('souffle', '🫧', 'Respirer & lâcher prise', 'Cohérence cardiaque, anti-fringale, scan corporel…', souffleCard())}
+  ${fold('souffle', '🫧', 'Respirer & lâcher prise', 'Cohérence cardiaque, anti-fringale, respiration carrée', souffleCard())}
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
 }
 function actsCard(t) {
@@ -1059,7 +1057,6 @@ const ACT = {
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
-  sfVoix: () => { S.sfVoix = S.sfVoix === false; if (!S.sfVoix) hush(); save(); render(); },
   sfGo: v => { if (ui.sf) clearInterval(ui.sf.iv); ui.sf = { id: v, t0: Date.now() + 1000 }; render(); setTimeout(() => { if (ui.sf) { ui.sf.iv = setInterval(sfTick, 250); sfTick(); } }, 900); },
   fold: v => { ui.fold = ui.fold || {}; ui.fold[v] = !ui.fold[v]; render(); },
   sfStop: () => { hush(); if (ui.sf) clearInterval(ui.sf.iv); ui.sf = null; ui.sub = null; render(); window.scrollTo(0, 0); },
