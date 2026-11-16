@@ -391,26 +391,34 @@ function slotRow(day, k, l) {
 }
 
 /* ---------- À table ---------- */
-const FRIGO = [['Protéines', ['Œufs', 'Poulet', 'Dinde', 'Bœuf', 'Jambon', 'Saumon', 'Thon', 'Cabillaud', 'Crevettes', 'Tofu']],
-  ['Frais', ['Skyr', 'Fromage blanc', 'Cottage cheese', 'Fromage frais', 'Yaourt', 'Feta', 'Mozzarella', 'Parmesan', 'Lait']],
-  ['Légumes', ['Avocat', 'Tomates', 'Tomates cerises', 'Concombre', 'Courgette', 'Carottes', 'Brocoli', 'Épinards', 'Champignons', 'Poivron', 'Haricots verts', 'Petits pois', 'Patate douce', 'Pommes de terre']],
-  ['Féculents', ['Riz', 'Pâtes', 'Quinoa', 'Semoule', 'Boulgour', 'Lentilles', 'Pois chiches', 'Pain', 'Tortillas', "Flocons d'avoine"]],
-  ['Fruits', ['Bananes', 'Pommes', 'Poires', 'Fruits rouges', 'Myrtilles', 'Mangue', 'Kiwis']],
-  ['Placard', ['Lait de coco', 'Sauce tomate', 'Tomates concassées', 'Chocolat noir', 'Cacao']]];
+const FAM = { 'Protéines': ['Œufs', 'Poulet', 'Dinde', 'Bœuf', 'Porc', 'Jambon', 'Lardons', 'Chorizo', 'Saumon', 'Truite', 'Thon', 'Cabillaud', 'Colin', 'Merlu', 'Maquereau', 'Sardines', 'Crevettes', 'Crabe', 'Tofu', 'Tempeh', 'Seitan', 'Falafels'],
+  'Frais': ['Skyr', 'Fromage blanc', 'Cottage cheese', 'Fromage frais', 'Cream cheese', 'Ricotta', 'Mascarpone', 'Yaourt', 'Feta', 'Mozzarella', 'Parmesan', 'Emmental', 'Chèvre', 'Halloumi', 'Lait', 'Crème'],
+  'Légumes': ['Avocat', 'Tomates', 'Tomates cerises', 'Concombre', 'Courgette', 'Carottes', 'Brocoli', 'Épinards', 'Champignons', 'Poivron', 'Aubergine', 'Poireau', 'Chou', 'Fenouil', 'Céleri', 'Asperges', 'Radis', 'Betterave', 'Haricots verts', 'Petits pois', 'Edamame', 'Patate douce', 'Pommes de terre', 'Potimarron', 'Salade', 'Roquette', 'Mâche', 'Oignon nouveau', 'Olives'],
+  'Féculents': ['Riz', 'Pâtes', 'Nouilles', 'Gnocchis', 'Quinoa', 'Semoule', 'Boulgour', 'Sarrasin', 'Lentilles', 'Pois chiches', 'Pois cassés', 'Haricots rouges', 'Haricots blancs', 'Pain', 'Tortillas', 'Galettes de blé', "Flocons d'avoine", 'Flocons de petit épeautre', 'Granola'],
+  'Fruits': ['Bananes', 'Pommes', 'Poires', 'Fruits rouges', 'Myrtilles', 'Framboises', 'Fraises', 'Mangue', 'Kiwis', 'Ananas', 'Orange', 'Clémentines', 'Abricots', 'Dattes'],
+  'Placard': ['Lait de coco', 'Sauce tomate', 'Tomates concassées', 'Pâte de curry', 'Pâte miso', 'Tahini', 'Houmous', 'Chocolat noir', 'Cacao', 'Amandes', 'Noix', 'Beurre de cacahuète', 'Graines de chia', 'Biscuits'] };
 const STAPLE = new Set(["Huile d'olive", 'Miel', 'Sauce soja', 'Citron', 'Citron vert', 'Oignons']);
-let FK = null; const FKEYS = () => FK || (FK = C_KEYS.concat([['filet mignon', 'Porc'], ['porc', 'Porc'], ['chèvre', 'Chèvre'], ['betterave', 'Betterave'], ['datte', 'Dattes'], ['amande', 'Amandes'], ['noix', 'Noix'], ['edamame', 'Edamame'], ['clémentine', 'Clémentines'], ['nouilles', 'Nouilles'], ['beurre de cacahuète', 'Beurre de cacahuète'], ['crème', 'Crème'], ['gnocchi', 'Gnocchis'], ['chou', 'Chou'], ['poireau', 'Poireau'], ['aubergine', 'Aubergine'], ['fenouil', 'Fenouil'], ['radis', 'Radis'], ['salade', 'Salade'], ['roquette', 'Roquette'], ['mâche', 'Mâche'], ['houmous', 'Houmous'], ['ananas', 'Ananas'], ['orange', 'Orange'], ['abricot', 'Abricots'], ['framboise', 'Framboises'], ['fraise', 'Fraises'], ['chorizo', 'Chorizo'], ['lardon', 'Lardons'], ['merlu', 'Merlu'], ['maquereau', 'Maquereau'], ['sardine', 'Sardines'], ['crabe', 'Crabe'], ['seitan', 'Seitan'], ['tempeh', 'Tempeh'], ['blanc d\'œuf', 'Œufs']]));
+let FK = null; const FKEYS = () => FK || (FK = C_KEYS.concat([['filet mignon', 'Porc'], ['porc', 'Porc'], ['chèvre', 'Chèvre'], ['betterave', 'Betterave'], ['datte', 'Dattes'], ['amande', 'Amandes'], ['noix', 'Noix'], ['edamame', 'Edamame'], ['clémentine', 'Clémentines'], ['nouilles', 'Nouilles'], ['beurre de cacahuète', 'Beurre de cacahuète'], ['crème', 'Crème'], ['gnocchi', 'Gnocchis'], ['chou', 'Chou'], ['poireau', 'Poireau'], ['aubergine', 'Aubergine'], ['fenouil', 'Fenouil'], ['radis', 'Radis'], ['salade', 'Salade'], ['roquette', 'Roquette'], ['mâche', 'Mâche'], ['houmous', 'Houmous'], ['ananas', 'Ananas'], ['orange', 'Orange'], ['abricot', 'Abricots'], ['framboise', 'Framboises'], ['fraise', 'Fraises'], ['chorizo', 'Chorizo'], ['lardon', 'Lardons'], ['merlu', 'Merlu'], ['maquereau', 'Maquereau'], ['sardine', 'Sardines'], ['crabe', 'Crabe'], ['seitan', 'Seitan'], ['tempeh', 'Tempeh'], ['blanc d\'œuf', 'Œufs'], ['blancs (', 'Œufs'], ['potimarron', 'Potimarron'], ['asperge', 'Asperges'], ['halloumi', 'Halloumi'], ['olive', 'Olives'], ['steak', 'Bœuf'], ['rumsteck', 'Bœuf'], ['bavette', 'Bœuf'], ['penne', 'Pâtes'], ['tagliatelle', 'Pâtes'], ['lasagne', 'Pâtes'], ['spaghetti', 'Pâtes'], ['céleri', 'Céleri'], ['mascarpone', 'Mascarpone'], ['biscuits', 'Biscuits'], ['granola', 'Granola'], ['galette de blé', 'Galettes de blé'], ['falafel', 'Falafels'], ['romaine', 'Salade'], ['jeunes pousses', 'Salade'], ['chia', 'Graines de chia'], ['pâte de curry', 'Pâte de curry'], ['miso', 'Pâte miso'], ['tahini', 'Tahini']]));
 const recKeys = r => { const k = new Set(); (r.ing || []).forEach(line => String(line).toLowerCase().split(/ · | \+ /).forEach(seg => { const head = seg.split(',')[0]; const m = FKEYS().find(([w]) => head.includes(w)); if (m && !STAPLE.has(m[1])) k.add(m[1]); })); return k; };
 function frigoList() {
   const have = new Set(S.frigo || []); if (!have.size) return [];
   return C.recipes.concat(S.own).map(r => { const k = [...recKeys(r)]; const got = k.filter(x => have.has(x)); return { r, got, miss: k.filter(x => !have.has(x)) }; })
     .filter(x => x.got.length).sort((a, b) => a.miss.length - b.miss.length || b.got.length - a.got.length).slice(0, 40);
 }
+const frigoKeys = () => { const k = new Set(); C.recipes.concat(S.own).forEach(r => recKeys(r).forEach(x => k.add(x))); return k; };
 function vFrigo() {
-  const have = new Set(S.frigo || []), L = frigoList();
+  const have = new Set(S.frigo || []), L = frigoList(), all = frigoKeys(), fq = norm(ui.fq || '');
+  const fams = Object.entries(FAM).map(([g, xs]) => [g, xs.filter(x => all.has(x))]);
+  const known = new Set(Object.values(FAM).flat()); const others = [...all].filter(x => !known.has(x)).sort((a, b) => a.localeCompare(b, 'fr'));
+  if (others.length) fams.push(['Autres', others]);
+  const FRIGO = fams.map(([g, xs]) => [g, xs.filter(x => !fq || norm(x).includes(fq))]).filter(([, xs]) => xs.length);
   return `${headBlock()}<button class="link" data-act="seg" data-v="recettes">‹ Recettes</button>
   <div class="card acts mt"><h3 class="serif" style="margin:0 0 4px;font-size:22px">Dans mon frigo</h3>
   <p class="small" style="margin:0;color:var(--txt2)">Coche ce que tu as sous la main : je te montre les recettes du Club que tu peux faire.</p></div>
-  ${FRIGO.map(([g, xs]) => `<p class="lab mt">${g}</p><div class="chips" style="flex-wrap:wrap;overflow:visible;padding-top:4px">${xs.map(x => `<button class="chip ${have.has(x) ? 'on' : ''}" data-act="frigoTog" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`).join('')}
+  <input type="search" id="fq" placeholder="Chercher un ingrédient : feta, quinoa…" value="${esc(ui.fq || '')}" autocomplete="off" enterkeyhint="search">
+  ${have.size ? `<p class="lab mt">Ma sélection (${have.size})</p><div class="chips" style="flex-wrap:wrap;overflow:visible;padding-top:4px">${[...have].map(x => `<button class="chip on" data-act="frigoTog" data-v="${esc(x)}">${esc(x)} ×</button>`).join('')}</div>` : ''}
+  ${fq && !FRIGO.length ? '<p class="muted small mt">Aucune recette du Club n\'utilise cet ingrédient pour l\'instant.</p>' : ''}
+  <div id="fchips">${FRIGO.map(([g, xs]) => `<p class="lab mt">${g}</p><div class="chips" style="flex-wrap:wrap;overflow:visible;padding-top:4px">${xs.map(x => `<button class="chip ${have.has(x) ? 'on' : ''}" data-act="frigoTog" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`).join('')}</div>
   ${have.size ? `<button class="link mt" data-act="frigoClear">Tout décocher</button>` : ''}
   <h3 class="mt2">${have.size ? (L.length ? 'Tu peux cuisiner' : 'Aucune recette trouvée') : 'Tes idées de recettes'}</h3>
   ${!have.size ? '<p class="muted small">Coche au moins un ingrédient pour voir tes idées.</p>' : L.map(({ r, miss }) => `<div class="card" style="padding:10px"><div class="row tap" data-go="table|recette|${r.id}">${r.img ? `<img class="thumb" style="width:64px;height:64px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div class="serif" style="font-size:17px">${esc(r.t)}</div>
@@ -1061,13 +1069,14 @@ document.addEventListener('change', e => {
   img.src = url;
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'fq') { ui.fq = e.target.value; const d = document.createElement('div'); d.innerHTML = vFrigo(); const box = $('#fchips'), nb = d.querySelector('#fchips'); if (box && nb) { box.innerHTML = nb.innerHTML; box.querySelectorAll('[data-act]').forEach(b => b.onclick = ev => { ev.stopPropagation(); ACT[b.dataset.act](b.dataset.v, b); }); } return; }
   if (e.target.id === 'rq') { ui.q = e.target.value; const box = document.querySelector('.rlist'); if (box) box.innerHTML = rList(filtered()); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
     if (e.target.dataset.k === 'f') { const box = document.getElementById('sug_' + i); if (box) { const sg = foodOf(e.target.value) ? [] : suggest(e.target.value); box.innerHTML = sg.length ? `<div class="chips" style="flex-wrap:wrap;padding-top:8px">${sg.map(f => `<button class="chip" data-sug="${i}" data-name="${esc(f[0])}">${esc(f[0])}</button>`).join('')}</div>` : (e.target.value.trim().length > 2 ? '<p class="fine" style="margin:6px 0 0">Pas dans la liste : il ne sera pas compté.</p>' : ''); } } }
   if (e.target.dataset && e.target.dataset.std && ui.stocks && ui.stocks[e.target.dataset.std]) { ui.stocks[e.target.dataset.std].d = e.target.value; return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); } if (e.target.id === 'jnote') { const d = ui.jday || today(); (L.journal[d] = L.journal[d] || {}).note = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(save, 600); } });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target.id === 'rq') { e.target.blur(); return; }
+  if (e.key === 'Enter' && (e.target.id === 'rq' || e.target.id === 'fq')) { e.target.blur(); return; }
   if (e.key === 'Enter' && e.target.id === 'cAdd') { e.preventDefault(); ACT.cAdd(); return; }
   const t = e.target; if (e.key !== 'Enter' || !t.dataset || t.dataset.row === undefined || !ui.draft) return;
   e.preventDefault(); const i = +t.dataset.row, k = t.dataset.k, rows = ui.draft.rows, r = rows[i];
