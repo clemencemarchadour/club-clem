@@ -706,8 +706,12 @@ function vSouffle(id) {
   ${run ? `<button class="btn ghost full" data-act="sfStop">Arrêter</button>` : `<button class="btn full" data-act="sfGo" data-v="${id}" style="background:var(--sauge-f);border-color:var(--sauge-f)">Commencer</button>`}
   <p class="fine mt">Ces exercices de respiration et de relaxation ne remplacent pas un avis médical. Si tu ressens un malaise, reprends une respiration normale.</p>`;
 }
+function fold(k, ico, t, sub, body) {
+  const open = (ui.fold || {})[k];
+  return `<div class="card tap row ${k === 'souffle' ? 'acts' : ''}" data-act="fold" data-v="${k}" style="padding:16px;margin-top:12px"><span style="font-size:26px">${ico}</span><div class="grow"><div class="serif" style="font-size:20px">${t}</div><div class="small" style="color:var(--txt2)">${sub}</div></div><span style="font-size:20px;transform:rotate(${open ? 90 : 0}deg);transition:transform .2s">›</span></div>${open ? `<div style="margin-bottom:8px">${body}</div>` : ''}`;
+}
 function souffleCard() {
-  return `<h3 class="mt2">Respirer & lâcher prise</h3><p class="small muted" style="margin:-4px 0 10px">Prendre soin de toi, c'est aussi apaiser ton mental.</p>
+  return `<p class="small muted" style="margin:4px 0 10px">Prendre soin de toi, c'est aussi apaiser ton mental.</p>
   ${Object.entries(SOUFFLE).map(([id, x]) => `<div class="card tap row" data-go="bouger|souffle|${id}" style="padding:14px 16px"><span style="font-size:24px">${x.ico}</span><div class="grow"><div class="serif" style="font-size:18px">${esc(x.t)}</div><div class="small muted">${x.d}</div></div><span>›</span></div>`).join('')}`;
 }
 function sfTick() {
@@ -746,11 +750,11 @@ function vBouger() {
   <div class="progress"><i style="width:${Math.min(100, (S.moves[t] || 0) / 30 * 100)}%"></i></div>
   <button class="btn full mt" data-act="five">Je n'ai que 5 minutes</button></div>
   ${actsCard(t)}
-  <span class="lab">Mon niveau</span>
+  ${fold('sport', '🏃‍♀️', 'Mes séances de sport', 'Des séances de 5, 10 ou 20 minutes, adaptées à ton niveau', `<span class="lab">Mon niveau</span>
   <div class="chips lvl">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
   ${groups.map(([g, l]) => `<h3 class="mt2" id="g_${g}">${l}</h3>${Object.entries(C.seances).filter(([, s]) => s.g === g).map(([id, s]) => seanceCard(id, s)).join('')}`).join('')}
-  <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>
-  ${souffleCard()}
+  <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>`)}
+  ${fold('souffle', '🫧', 'Respirer & lâcher prise', 'Cohérence cardiaque, anti-fringale, scan corporel…', souffleCard())}
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
 }
 function actsCard(t) {
@@ -1051,12 +1055,13 @@ const ACT = {
   cancelOwn: () => { const pd = ui.pending; ui.pending = null; ui.draft = null; go(pd ? pd.from : 'table'); },
   delOwn: v => { if (!confirm('Supprimer cette recette ?')) return; S.own = S.own.filter(r => r.id !== v); save(); go('table'); },
   water: v => { const t = JD(); S.water = S.water || {}; const n = S.water[t] || 0; S.water[t] = +v === n ? n - 1 : +v; save(); render(); },
-  five: () => { ui.sub = null; render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
+  five: () => { ui.sub = null; ui.fold = Object.assign(ui.fold || {}, { sport: true }); render(); const g = $('#g_express'); if (g) g.scrollIntoView({ behavior: 'smooth' }); },
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
   sfVoix: () => { S.sfVoix = S.sfVoix === false; if (!S.sfVoix) hush(); save(); render(); },
   sfGo: v => { if (ui.sf) clearInterval(ui.sf.iv); ui.sf = { id: v, t0: Date.now() + 1000 }; render(); setTimeout(() => { if (ui.sf) { ui.sf.iv = setInterval(sfTick, 250); sfTick(); } }, 900); },
+  fold: v => { ui.fold = ui.fold || {}; ui.fold[v] = !ui.fold[v]; render(); },
   sfStop: () => { hush(); if (ui.sf) clearInterval(ui.sf.iv); ui.sf = null; ui.sub = null; render(); window.scrollTo(0, 0); },
   actPM: v => { keepAct(); ui.actForm.pm = !!v; render(); },
   actM: v => { keepAct(); ui.actForm.m = v; render(); },
