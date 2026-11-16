@@ -206,6 +206,7 @@ async function boot() {
   if (!k) { gateView(); return; }
   try { C = await decryptContent(k); } catch (e) { app.innerHTML = '<div class="wrap"><div class="card">Impossible de charger le Club. Vérifie ta connexion et réessaie.</div></div>'; return; }
   try { const { data } = await sb.from('members').select('prenom,role').maybeSingle(); ME = data || {}; } catch (e) { ME = {}; }
+  try { sb.rpc('member_count').then(({ data }) => { if (typeof data === 'number' && data !== MEMBERS) { MEMBERS = data; if (ui.tab === 'journee' && !document.querySelector('.sheet, .bmodal')) render(); } }).catch(() => { }); } catch (e) { }
   loadLocal(); await pullRemote();
   document.body.classList.remove('nonav');
   render();
@@ -227,8 +228,9 @@ function bind() {
 }
 const prenom = () => (ME && ME.prenom) || '';
 const avatarInner = () => S.photo ? `<img src="${S.photo}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : esc((prenom() || 'C').charAt(0).toUpperCase());
+let MEMBERS = 0;
 function headBlock() {
-  return `<div class="top"><span style="width:40px"></span><div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div></div><button class="avatar" data-go="profil||" style="padding:0;overflow:hidden">${avatarInner()}</button></div>`;
+  return `<div class="top"><span style="width:40px"></span><div class="head"><span class="lab">Le Club</span><div class="clem">Clem</div><div class="sub">pour celles qui m'ont fait confiance</div>${ui.tab === 'journee' && MEMBERS >= 100 ? `<div class="small" style="margin-top:6px;color:var(--brun);font-weight:500">🤎 ${MEMBERS.toLocaleString('fr-FR')} membres dans le Club</div>` : ''}</div><button class="avatar" data-go="profil||" style="padding:0;overflow:hidden">${avatarInner()}</button></div>`;
 }
 
 /* ---------- badges ---------- */
