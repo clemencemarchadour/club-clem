@@ -685,7 +685,52 @@ function pickSheet(day, slot, mode = 'f') {
 }
 
 /* ---------- Bouger ---------- */
+const SOUFFLE = {
+  coherence: { t: 'Cohérence cardiaque', d: '5 min', ico: '🫧', intro: "Inspire quand la bulle grandit, expire quand elle rétrécit. 5 secondes pour inspirer, 5 secondes pour expirer, pendant 5 minutes. Idéal le matin, avant un repas ou quand le stress monte.", br: [5, 0, 5, 0], dur: 300 },
+  fringale: { t: 'Respiration anti-fringale', d: '2 min', ico: '🍃', intro: "Une envie soudaine de grignoter ? Avant de foncer vers le placard, offre-toi 2 minutes. Inspire 4 secondes, retiens 2 secondes, expire lentement 6 secondes. Ensuite, demande-toi : est-ce que j'ai vraiment faim, ou besoin d'une pause ?", br: [4, 2, 6, 0], dur: 120 },
+  carre: { t: 'Respiration carrée', d: '3 min', ico: '◻️', intro: "Pour retrouver ton calme en quelques minutes. Inspire 4 secondes, retiens 4 secondes, expire 4 secondes, reste poumons vides 4 secondes. Comme si tu dessinais un carré avec ton souffle.", br: [4, 4, 4, 4], dur: 180 },
+  scan: { t: 'Scan corporel', d: '4 min', ico: '🌙', intro: "Installe-toi confortablement, assise ou allongée, et ferme les yeux si tu le souhaites. Laisse-toi guider, étape par étape.", steps: ["Prends conscience de ta respiration, sans chercher à la changer. Sens l'air entrer, puis sortir.", "Porte ton attention sur tes pieds. Sens leur contact avec le sol ou le lit. Laisse-les se détendre.", "Remonte vers tes jambes, tes genoux, tes cuisses. À chaque expiration, laisse-les devenir plus lourdes.", "Observe ton ventre. Laisse-le se gonfler doucement à l'inspiration, sans le retenir.", "Relâche tes épaules. Laisse-les descendre, loin de tes oreilles.", "Détends ta mâchoire, ton front, le petit espace entre tes sourcils.", "Ressens ton corps dans son ensemble, détendu et posé. Prends une grande inspiration, et reviens doucement."], step: 35 },
+  ancrage: { t: 'Ancrage avant le repas', d: '1 min', ico: '🌿', intro: "Une minute pour passer en mode « je savoure » avant de manger, plutôt que de manger en pilote automatique.", steps: ["Pose tes deux pieds bien à plat. Prends trois respirations lentes.", "Regarde ton assiette : les couleurs, les textures, les odeurs.", "Demande-toi : quelle est ma faim, de 1 à 10 ?", "Prends ta première bouchée lentement, en posant ta fourchette entre chaque bouchée."], step: 15 }
+};
+function vSouffle(id) {
+  const x = SOUFFLE[id]; if (!x) return vBouger();
+  const run = ui.sf && ui.sf.id === id;
+  return `${headBlock()}<button class="link" data-act="sfStop">‹ Bouger</button>
+  <div class="card mt" style="text-align:center"><div style="font-size:34px">${x.ico}</div><h2 class="serif" style="margin:6px 0 2px">${esc(x.t)}</h2><span class="lab">${x.d}</span>
+  <p class="small" style="color:var(--txt2);margin:12px 0 0;text-align:left">${esc(x.intro)}</p></div>
+  ${x.br ? `<div class="card" style="text-align:center;padding:30px 16px"><div id="sfb" style="width:190px;height:190px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 40% 35%,#C9D3BE,var(--sauge-f));transform:scale(.45);opacity:.9;transition:transform 1s ease-in-out"></div>
+    <div class="serif" id="sfl" style="font-size:26px;margin-top:18px">${run ? '' : 'Prête ?'}</div><div class="small muted" id="sft" style="margin-top:4px">${run ? '' : 'Installe-toi confortablement'}</div></div>`
+    : `<div class="card" style="text-align:center;padding:26px 18px;min-height:190px"><span class="lab" id="sfn">${run ? '' : x.steps.length + ' étapes'}</span><p class="serif" id="sfs" style="font-size:21px;line-height:1.4;margin:14px 0 0">${run ? '' : 'Quand tu es prête, lance la séance.'}</p><div class="small muted" id="sft" style="margin-top:12px"></div></div>`}
+  ${run ? `<button class="btn ghost full" data-act="sfStop">Arrêter</button>` : `<button class="btn full" data-act="sfGo" data-v="${id}" style="background:var(--sauge-f);border-color:var(--sauge-f)">Commencer</button>`}
+  <p class="fine mt">Ces exercices de respiration et de relaxation ne remplacent pas un avis médical. Si tu ressens un malaise, reprends une respiration normale.</p>`;
+}
+function souffleCard() {
+  return `<h3 class="mt2">Respirer & lâcher prise</h3><p class="small muted" style="margin:-4px 0 10px">Prendre soin de toi, c'est aussi apaiser ton mental.</p>
+  ${Object.entries(SOUFFLE).map(([id, x]) => `<div class="card tap row" data-go="bouger|souffle|${id}" style="padding:14px 16px"><span style="font-size:24px">${x.ico}</span><div class="grow"><div class="serif" style="font-size:18px">${esc(x.t)}</div><div class="small muted">${x.d}</div></div><span>›</span></div>`).join('')}`;
+}
+function sfTick() {
+  const sf = ui.sf; if (!sf) return; const x = SOUFFLE[sf.id]; const el = (q) => document.querySelector(q);
+  const e = Math.floor((Date.now() - sf.t0) / 1000);
+  if (x.br) {
+    const total = x.dur; if (e >= total) return sfEnd();
+    const cyc = x.br.reduce((a, b) => a + b, 0), p = e % cyc; let acc = 0, ph = 0; for (; ph < 4; ph++) { if (p < acc + x.br[ph]) break; acc += x.br[ph]; }
+    const labels = ['Inspire', 'Retiens', 'Expire', 'Poumons vides'], left = x.br[ph] - (p - acc);
+    const b = el('#sfb'); if (b && sf.ph !== ph) { b.style.transition = `transform ${x.br[ph]}s ease-in-out`; b.style.transform = ph === 0 ? 'scale(1)' : ph === 2 ? 'scale(.45)' : b.style.transform; sf.ph = ph; }
+    const l = el('#sfl'); if (l) l.textContent = labels[ph] + ' · ' + left;
+    const t = el('#sft'); if (t) { const r = total - e; t.textContent = `Encore ${Math.floor(r / 60)} min ${String(r % 60).padStart(2, '0')}`; }
+  } else {
+    const i = Math.floor(e / x.step); if (i >= x.steps.length) return sfEnd();
+    const s = el('#sfs'); if (s && sf.i !== i) { s.textContent = x.steps[i]; sf.i = i; }
+    const n = el('#sfn'); if (n) n.textContent = `Étape ${i + 1} / ${x.steps.length}`;
+  }
+}
+function sfEnd() {
+  const sf = ui.sf; if (!sf) return; clearInterval(sf.iv); const x = SOUFFLE[sf.id], t = today();
+  S.souffle = S.souffle || {}; S.souffle[t] = (S.souffle[t] || 0) + 1; save();
+  ui.sf = null; render(); toast('Bravo, prends soin de toi 🤎');
+}
 function vBouger() {
+  if (ui.sub === 'souffle') return vSouffle(ui.arg);
   if (ui.sub === 'seance') return vSeance(ui.arg);
   if (ui.sub === 'exos') return vExos();
   if (ui.sub === 'exo') return vExo(ui.arg);
@@ -701,6 +746,7 @@ function vBouger() {
   <div class="chips lvl">${Object.entries(LEVELS).map(([k, v]) => `<button class="chip ${S.level === k ? 'on' : ''}" data-act="level" data-v="${k}">${v[0]}</button>`).join('')}</div>
   ${groups.map(([g, l]) => `<h3 class="mt2" id="g_${g}">${l}</h3>${Object.entries(C.seances).filter(([, s]) => s.g === g).map(([id, s]) => seanceCard(id, s)).join('')}`).join('')}
   <button class="btn ghost full mt2" data-go="bouger|exos|">Tous les exercices</button>
+  ${souffleCard()}
   <p class="fine mt">Écoute ton corps : en cas de douleur, arrête l'exercice. En cas de problème de santé, demande l'avis de ton médecin.</p>`;
 }
 function actsCard(t) {
@@ -750,7 +796,7 @@ function vSeance(id) {
   <div class="note">${esc(ex.c)}<div class="lab" style="font-style:normal;margin-top:6px">Le conseil de Clem</div></div>
   <div class="card"><span class="lab">Plus facile</span><p style="margin:6px 0 0">${esc(ex.f)}</p></div>`}`;
 }
-function stopTimer() { if (ui.timer) { clearInterval(ui.timer); ui.timer = null; } if (PL) PL.run = false; }
+function stopTimer() { if (ui.sf) { clearInterval(ui.sf.iv); ui.sf = null; } if (ui.timer) { clearInterval(ui.timer); ui.timer = null; } if (PL) PL.run = false; }
 function beep() { try { navigator.vibrate && navigator.vibrate(200); const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); o.frequency.value = 880; o.connect(a.destination); o.start(); o.stop(a.currentTime + .15); } catch (e) { } }
 function tick() {
   PL.left--;
@@ -1005,6 +1051,8 @@ const ACT = {
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
+  sfGo: v => { if (ui.sf) clearInterval(ui.sf.iv); ui.sf = { id: v, t0: Date.now() + 1000 }; render(); setTimeout(() => { if (ui.sf) { ui.sf.iv = setInterval(sfTick, 250); sfTick(); } }, 900); },
+  sfStop: () => { if (ui.sf) clearInterval(ui.sf.iv); ui.sf = null; ui.sub = null; render(); window.scrollTo(0, 0); },
   actPM: v => { keepAct(); ui.actForm.pm = !!v; render(); },
   actM: v => { keepAct(); ui.actForm.m = v; render(); },
   actSave: () => {
