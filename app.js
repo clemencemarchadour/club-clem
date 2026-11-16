@@ -685,14 +685,13 @@ function pickSheet(day, slot, mode = 'f') {
 }
 
 /* ---------- Bouger ---------- */
-function say(txt) { try { if (!S.sfVoix && S.sfVoix !== undefined) return; const sy = window.speechSynthesis; if (!sy) return; sy.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.85; u.pitch = 1;
-  const v = sy.getVoices().filter(v => /^fr/i.test(v.lang)); const pref = v.find(v => /amélie|amelie|audrey|aurélie|marie|virginie|google français/i.test(v.name)) || v[0]; if (pref) u.voice = pref; sy.speak(u); } catch (e) { } }
-function hush() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { } }
+function say() { }
+function hush() { }
 const SOUFFLE = {
-  coherence: { t: 'Cohérence cardiaque', d: '5 min', ico: '🫧', intro: "Inspire quand la bulle grandit, expire quand elle rétrécit : 5 secondes chacun, pendant 5 minutes. Avec le son, une voix te dit quand inspirer et expirer, tu peux donc fermer les yeux. Idéal le matin, avant un repas ou quand le stress monte.", br: [5, 0, 5, 0], dur: 300 },
+  coherence: { t: 'Cohérence cardiaque', d: '5 min', ico: '🫧', intro: "Inspire quand la bulle grandit, expire quand elle rétrécit : 5 secondes chacun, pendant 5 minutes. Idéal le matin, avant un repas ou quand le stress monte.", br: [5, 0, 5, 0], dur: 300 },
   fringale: { t: 'Respiration anti-fringale', d: '2 min', ico: '🍃', intro: "Une envie soudaine de grignoter ? Avant de foncer vers le placard, offre-toi 2 minutes. Inspire 4 secondes, retiens 2 secondes, expire lentement 6 secondes. Ensuite, demande-toi : est-ce que j'ai vraiment faim, ou besoin d'une pause ?", br: [4, 2, 6, 0], dur: 120 },
   carre: { t: 'Respiration carrée', d: '3 min', ico: '◻️', intro: "Pour retrouver ton calme en quelques minutes. Inspire 4 secondes, retiens 4 secondes, expire 4 secondes, reste poumons vides 4 secondes. Comme si tu dessinais un carré avec ton souffle.", br: [4, 4, 4, 4], dur: 180 },
-  scan: { t: 'Scan corporel', d: '4 min', ico: '🌙', intro: "Installe-toi confortablement, assise ou allongée. Monte le son : une voix te guide étape par étape, tu peux fermer les yeux.", steps: ["Prends conscience de ta respiration, sans chercher à la changer. Sens l'air entrer, puis sortir.", "Porte ton attention sur tes pieds. Sens leur contact avec le sol ou le lit. Laisse-les se détendre.", "Remonte vers tes jambes, tes genoux, tes cuisses. À chaque expiration, laisse-les devenir plus lourdes.", "Observe ton ventre. Laisse-le se gonfler doucement à l'inspiration, sans le retenir.", "Relâche tes épaules. Laisse-les descendre, loin de tes oreilles.", "Détends ta mâchoire, ton front, le petit espace entre tes sourcils.", "Ressens ton corps dans son ensemble, détendu et posé. Prends une grande inspiration, et reviens doucement."], step: 35 },
+  scan: { t: 'Scan corporel', d: '4 min', ico: '🌙', intro: "Installe-toi confortablement, assise ou allongée. Lis chaque étape, puis prends le temps de la ressentir : la suivante arrive toute seule.", steps: ["Prends conscience de ta respiration, sans chercher à la changer. Sens l'air entrer, puis sortir.", "Porte ton attention sur tes pieds. Sens leur contact avec le sol ou le lit. Laisse-les se détendre.", "Remonte vers tes jambes, tes genoux, tes cuisses. À chaque expiration, laisse-les devenir plus lourdes.", "Observe ton ventre. Laisse-le se gonfler doucement à l'inspiration, sans le retenir.", "Relâche tes épaules. Laisse-les descendre, loin de tes oreilles.", "Détends ta mâchoire, ton front, le petit espace entre tes sourcils.", "Ressens ton corps dans son ensemble, détendu et posé. Prends une grande inspiration, et reviens doucement."], step: 35 },
   ancrage: { t: 'Ancrage avant le repas', d: '1 min', ico: '🌿', intro: "Une minute pour passer en mode « je savoure » avant de manger, plutôt que de manger en pilote automatique.", steps: ["Pose tes deux pieds bien à plat. Prends trois respirations lentes.", "Regarde ton assiette : les couleurs, les textures, les odeurs.", "Demande-toi : quelle est ma faim, de 1 à 10 ?", "Prends ta première bouchée lentement, en posant ta fourchette entre chaque bouchée."], step: 15 }
 };
 function vSouffle(id) {
@@ -704,7 +703,6 @@ function vSouffle(id) {
   ${x.br ? `<div class="card" style="text-align:center;padding:30px 16px"><div id="sfb" style="width:190px;height:190px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 40% 35%,#C9D3BE,var(--sauge-f));transform:scale(.45);opacity:.9;transition:transform 1s ease-in-out"></div>
     <div class="serif" id="sfl" style="font-size:26px;margin-top:18px">${run ? '' : 'Prête ?'}</div><div class="small muted" id="sft" style="margin-top:4px">${run ? '' : 'Installe-toi confortablement'}</div></div>`
     : `<div class="card" style="text-align:center;padding:26px 18px;min-height:190px"><span class="lab" id="sfn">${run ? '' : x.steps.length + ' étapes'}</span><p class="serif" id="sfs" style="font-size:21px;line-height:1.4;margin:14px 0 0">${run ? '' : 'Quand tu es prête, lance la séance.'}</p><div class="small muted" id="sft" style="margin-top:12px"></div></div>`}
-  <div class="row between card" style="padding:12px 16px"><span>🔊 Voix guidée</span><button class="chip ${S.sfVoix !== false ? 'on' : ''}" data-act="sfVoix">${S.sfVoix !== false ? 'Activée' : 'Désactivée'}</button></div>
   ${run ? `<button class="btn ghost full" data-act="sfStop">Arrêter</button>` : `<button class="btn full" data-act="sfGo" data-v="${id}" style="background:var(--sauge-f);border-color:var(--sauge-f)">Commencer</button>`}
   <p class="fine mt">Ces exercices de respiration et de relaxation ne remplacent pas un avis médical. Si tu ressens un malaise, reprends une respiration normale.</p>`;
 }
@@ -1058,7 +1056,7 @@ const ACT = {
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
   sfVoix: () => { S.sfVoix = S.sfVoix === false; if (!S.sfVoix) hush(); save(); render(); },
-  sfGo: v => { if (ui.sf) clearInterval(ui.sf.iv); if (S.sfVoix !== false) { S.sfVoix = true; say('C\'est parti. Installe-toi confortablement.'); } ui.sf = { id: v, t0: Date.now() + 1000 }; render(); setTimeout(() => { if (ui.sf) { ui.sf.iv = setInterval(sfTick, 250); sfTick(); } }, 900); },
+  sfGo: v => { if (ui.sf) clearInterval(ui.sf.iv); ui.sf = { id: v, t0: Date.now() + 1000 }; render(); setTimeout(() => { if (ui.sf) { ui.sf.iv = setInterval(sfTick, 250); sfTick(); } }, 900); },
   sfStop: () => { hush(); if (ui.sf) clearInterval(ui.sf.iv); ui.sf = null; ui.sub = null; render(); window.scrollTo(0, 0); },
   actPM: v => { keepAct(); ui.actForm.pm = !!v; render(); },
   actM: v => { keepAct(); ui.actForm.m = v; render(); },
