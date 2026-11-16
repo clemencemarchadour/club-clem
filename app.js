@@ -391,8 +391,36 @@ function slotRow(day, k, l) {
 }
 
 /* ---------- À table ---------- */
+const FRIGO = [['Protéines', ['Œufs', 'Poulet', 'Dinde', 'Bœuf', 'Jambon', 'Saumon', 'Thon', 'Cabillaud', 'Crevettes', 'Tofu']],
+  ['Frais', ['Skyr', 'Fromage blanc', 'Cottage cheese', 'Fromage frais', 'Yaourt', 'Feta', 'Mozzarella', 'Parmesan', 'Lait']],
+  ['Légumes', ['Avocat', 'Tomates', 'Tomates cerises', 'Concombre', 'Courgette', 'Carottes', 'Brocoli', 'Épinards', 'Champignons', 'Poivron', 'Haricots verts', 'Petits pois', 'Patate douce', 'Pommes de terre']],
+  ['Féculents', ['Riz', 'Pâtes', 'Quinoa', 'Semoule', 'Boulgour', 'Lentilles', 'Pois chiches', 'Pain', 'Tortillas', "Flocons d'avoine"]],
+  ['Fruits', ['Bananes', 'Pommes', 'Poires', 'Fruits rouges', 'Myrtilles', 'Mangue', 'Kiwis']],
+  ['Placard', ['Lait de coco', 'Sauce tomate', 'Tomates concassées', 'Chocolat noir', 'Cacao']]];
+const STAPLE = new Set(["Huile d'olive", 'Miel', 'Sauce soja', 'Citron', 'Citron vert', 'Oignons']);
+let FK = null; const FKEYS = () => FK || (FK = C_KEYS.concat([['filet mignon', 'Porc'], ['porc', 'Porc'], ['chèvre', 'Chèvre'], ['betterave', 'Betterave'], ['datte', 'Dattes'], ['amande', 'Amandes'], ['noix', 'Noix'], ['edamame', 'Edamame'], ['clémentine', 'Clémentines'], ['nouilles', 'Nouilles'], ['beurre de cacahuète', 'Beurre de cacahuète'], ['crème', 'Crème'], ['gnocchi', 'Gnocchis'], ['chou', 'Chou'], ['poireau', 'Poireau'], ['aubergine', 'Aubergine'], ['fenouil', 'Fenouil'], ['radis', 'Radis'], ['salade', 'Salade'], ['roquette', 'Roquette'], ['mâche', 'Mâche'], ['houmous', 'Houmous'], ['ananas', 'Ananas'], ['orange', 'Orange'], ['abricot', 'Abricots'], ['framboise', 'Framboises'], ['fraise', 'Fraises'], ['chorizo', 'Chorizo'], ['lardon', 'Lardons'], ['merlu', 'Merlu'], ['maquereau', 'Maquereau'], ['sardine', 'Sardines'], ['crabe', 'Crabe'], ['seitan', 'Seitan'], ['tempeh', 'Tempeh'], ['blanc d\'œuf', 'Œufs']]));
+const recKeys = r => { const k = new Set(); (r.ing || []).forEach(line => String(line).toLowerCase().split(/ · | \+ /).forEach(seg => { const head = seg.split(',')[0]; const m = FKEYS().find(([w]) => head.includes(w)); if (m && !STAPLE.has(m[1])) k.add(m[1]); })); return k; };
+function frigoList() {
+  const have = new Set(S.frigo || []); if (!have.size) return [];
+  return C.recipes.concat(S.own).map(r => { const k = [...recKeys(r)]; const got = k.filter(x => have.has(x)); return { r, got, miss: k.filter(x => !have.has(x)) }; })
+    .filter(x => x.got.length).sort((a, b) => a.miss.length - b.miss.length || b.got.length - a.got.length).slice(0, 40);
+}
+function vFrigo() {
+  const have = new Set(S.frigo || []), L = frigoList();
+  return `${headBlock()}<button class="link" data-act="seg" data-v="recettes">‹ Recettes</button>
+  <div class="card acts mt"><h3 class="serif" style="margin:0 0 4px;font-size:22px">Dans mon frigo</h3>
+  <p class="small" style="margin:0;color:var(--txt2)">Coche ce que tu as sous la main : je te montre les recettes du Club que tu peux faire.</p></div>
+  ${FRIGO.map(([g, xs]) => `<p class="lab mt">${g}</p><div class="chips" style="flex-wrap:wrap;overflow:visible;padding-top:4px">${xs.map(x => `<button class="chip ${have.has(x) ? 'on' : ''}" data-act="frigoTog" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`).join('')}
+  ${have.size ? `<button class="link mt" data-act="frigoClear">Tout décocher</button>` : ''}
+  <h3 class="mt2">${have.size ? (L.length ? 'Tu peux cuisiner' : 'Aucune recette trouvée') : 'Tes idées de recettes'}</h3>
+  ${!have.size ? '<p class="muted small">Coche au moins un ingrédient pour voir tes idées.</p>' : L.map(({ r, miss }) => `<div class="card" style="padding:10px"><div class="row tap" data-go="table|recette|${r.id}">${r.img ? `<img class="thumb" style="width:64px;height:64px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div class="serif" style="font-size:17px">${esc(r.t)}</div>
+    <div class="small" style="color:${miss.length ? 'var(--or)' : 'var(--sauge-f)'}">${miss.length ? 'Il te manque : ' + miss.map(esc).join(', ') : 'Tu as tout ✓'}</div></div></div>
+    ${miss.length ? `<button class="link small" data-act="frigoCourses" data-v="${r.id}" style="margin-top:6px">+ Ajouter ce qui manque à mes courses</button>` : ''}</div>`).join('')}
+  <p class="fine mt">Le sel, le poivre, les épices, l'huile, le miel, le citron et l'oignon sont considérés comme toujours dans tes placards.</p>`;
+}
 function vTable() {
   if (ui.sub === 'recette') return vRecette(ui.arg);
+  if (ui.sub === 'frigo') return vFrigo();
   if (ui.sub === 'ajout') return vAjout();
   const seg = ui.tableSeg;
   return `${headBlock()}
@@ -422,7 +450,8 @@ function filtered() {
 function vRecettes() {
   const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas'], ['dessert', 'Desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
   const list = filtered();
-  return `<input type="search" id="rq" class="mt" placeholder="Rechercher : poulet, avocat, pancakes…" value="${esc(ui.q || '')}" autocomplete="off" enterkeyhint="search">
+  return `<div class="card acts tap row mt" data-go="table|frigo|" style="padding:14px 16px"><span style="font-size:26px">🧺</span><div class="grow"><div class="serif" style="font-size:18px">Dans mon frigo</div><div class="small" style="color:var(--txt2)">Dis-moi ce que tu as, je te dis quoi cuisiner</div></div><span>›</span></div>
+  <input type="search" id="rq" class="mt" placeholder="Rechercher : poulet, avocat, pancakes…" value="${esc(ui.q || '')}" autocomplete="off" enterkeyhint="search">
   <div class="chips">${F.map(([k, l]) => `<button class="chip ${ui.filter === k ? 'on' : ''}" data-act="filter" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="rlist">${rList(list)}</div>
   <button class="btn ghost full mt" data-act="newOwn">+ Ajouter ma propre recette</button>`;
@@ -491,6 +520,31 @@ function suggest(t) {
     if (!words.some(w => w.startsWith('cru')) && /\bcrue?s?\b/.test(n)) sc -= 2.5;
     if (f[7]) sc += 2.5; if (n === full || n.split(' ').map(sing).join(' ') === full.split(' ').map(sing).join(' ')) sc += 10; return [sc - n.length / 60, f]; }).filter(Boolean).sort((x, y) => y[0] - x[0]).slice(0, 8).map(x => x[1]);
   const r = score(true); return r.length ? r : score(false);
+}
+const NUMW = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, demi: 0.5, demie: 0.5, moitie: 0.5, quart: 0.25, quarts: 0.25, tiers: 0.33 };
+const UNITW = [[/^(kg|kilos?)$/, 1000], [/^(g|gr|grs|grammes?)$/, 1], [/^(ml)$/, 1], [/^(cl)$/, 10], [/^(l|litres?)$/, 1000], [/^(cs|cas|soupe)$/, 15], [/^(cc|cac|cafe)$/, 5], [/^(tranches?)$/, 30], [/^(bols?)$/, 250], [/^(verres?)$/, 200], [/^(poignees?)$/, 30], [/^(pots?)$/, 125], [/^(sachets?)$/, 10], [/^(carres?)$/, 10]];
+function parseMeal(txt) {
+  return String(txt || '').split(/[,;\n+]|\bet\b|\bavec\b|\bpuis\b|\bplus\b/i).map(x => x.trim()).filter(Boolean).map(raw => {
+    let w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2')).replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
+    const out = [];
+    for (let i = 0; i < w.length; i++) {
+      const x = w[i];
+      if (/^\d+([.,]\d+)?$/.test(x)) { q = (q && q < 1 ? q : 0) + parseFloat(x.replace(',', '.')); continue; }
+      if (/^\d+frac\d+$/.test(x)) { const [a, b] = x.split('frac'); q = (q || 0) + a / b; continue; }
+      if (x in NUMW && out.length === 0 && !mult) { const v = NUMW[x]; q = v < 1 ? (q && q >= 1 && x !== 'demi' ? q * v : v) : (q && q < 1 ? q * v : v); if (/^quarts?$/.test(x) && w[i - 1] === 'trois') q = 0.75; continue; }
+      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult) { mult = u[1]; continue; }
+      if ((x === 'c' || x === 'cuillere' || x === 'cuilleres' || x === 'a' || x === 'la' || x === 'de' || x === 'd' || x === 'des' || x === 'du' || x === 'l') && out.length === 0) continue;
+      out.push(x);
+    }
+    const name = out.join(' '), sg = name ? suggest(name) : [];
+    if (!sg.length) return { raw, f: null };
+    let f = sg[0];
+    if (!mult && !f[5]) { const fu = sg.find(x => x[5] && norm(x[0]).split(' ')[0].replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')); if (fu && fu[5]) f = fu; }
+    if (mult) return { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
+    if (f[5]) return { raw, f: f[0], q: q || 1, u: 'u' };
+    if (q && q >= 20) return { raw, f: f[0], q, u: 'g' };
+    return { raw, f: f[0], q: 100, u: 'g', check: true };
+  });
 }
 const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
 function resolveRow(r) {
@@ -566,6 +620,19 @@ function pickSheet(day, slot, mode = 'f') {
       <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
       <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
     <p class="fine center" style="margin:10px 0 0">Ajoute tous tes aliments, puis touche <b>Terminé</b> en haut.</p></div>`; };
+  let meal = null;
+  const mealCard = () => `<div class="card acts" style="padding:14px 16px;margin-top:12px"><div class="serif" style="font-size:18px">✍️ Écris ce que tu as mangé</div>
+    <textarea data-meal rows="3" placeholder="Ex. : 2 œufs brouillés, 50 g de blanc d'œuf, 100 g de poulet, un demi-avocat" style="width:100%;margin-top:8px;padding:10px;border-radius:14px;border:1px solid var(--filet);font:inherit;resize:vertical">${esc(meal ? meal.txt : '')}</textarea>
+    ${meal && meal.rows ? `<div style="margin-top:8px">${meal.rows.map((r, i) => r.f ? `<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--filet)"><span class="small">${esc(r.f)} · <b>${r.u === 'u' ? String(r.q).replace('.', ',') + ' ' + esc(((foodOf(r.f) || [])[6] || '') + (r.q > 1 && ((foodOf(r.f) || [])[6] || '').length < 12 && !/s$/.test((foodOf(r.f) || [])[6] || '') ? 's' : '')) : r.q + ' g'}</b>${r.check ? ' <span style="color:var(--or)">(quantité à vérifier)</span>' : ''}</span><span class="small muted">${Math.round(fVals(r).kcal)} kcal <button class="heart" data-mrm="${i}">×</button></span></div>` : `<div class="small" style="padding:5px 0;color:var(--or)">Je n'ai pas reconnu « ${esc(r.raw)} » : ajoute-le avec la recherche. <button class="heart" data-mrm="${i}">×</button></div>`).join('')}</div>
+      <div class="grid2 mt"><button class="btn ghost sm" data-mcalc>Recalculer</button><button class="btn sm" data-madd ${meal.rows.some(r => r.f) ? '' : 'disabled'}>Ajouter</button></div>` : `<button class="btn full mt" data-mcalc style="background:var(--sauge-f);border-color:var(--sauge-f)">Calculer</button>`}</div>`;
+  const mealWire = () => {
+    const ta = body.querySelector('[data-meal]'); if (!ta) return;
+    ta.oninput = () => { meal = Object.assign(meal || {}, { txt: ta.value }); };
+    const c = body.querySelector('[data-mcalc]'); if (c) c.onclick = () => { meal = { txt: ta.value, rows: parseMeal(ta.value) }; foodBody(); };
+    body.querySelectorAll('[data-mrm]').forEach(b => b.onclick = () => { meal.rows.splice(+b.dataset.mrm, 1); foodBody(); });
+    const a = body.querySelector('[data-madd]'); if (a) a.onclick = () => { const ok = meal.rows.filter(r => r.f); ok.slice().reverse().forEach(r => list().unshift({ f: r.f, q: r.q, u: r.u }));
+      S.recentF = [...new Set(ok.map(r => r.f).concat(S.recentF || []))].slice(0, 12); save(); meal = null; foodBody(); el.querySelector('.in').scrollTop = 0; toast('Ajouté à ton repas'); };
+  };
   const foodBody = () => {
     const q = pq.value.trim();
     const fav = S.favF || (S.favF = []);
@@ -575,7 +642,7 @@ function pickSheet(day, slot, mode = 'f') {
     const resHtml = tabs + `<p class="small muted ${q ? 'mt' : ''}">${q ? 'Touche un aliment pour l\'ajouter :' : (res.length ? (fsub === 'fav' ? 'Tes aliments favoris :' : 'Tes aliments récents :') : emptyMsg)}</p>
       ${res.map(f => `<div class="card tap row" data-addf="${esc(f[0])}" style="padding:10px 14px"><div class="grow"><div>${esc(f[0])}</div><div class="small muted">${f[5] ? `1 ${esc(f[6])} (${f[5]} g) · ${Math.round(f[1] * f[5] / 100)} kcal` : `100 g · ${Math.round(f[1])} kcal`}</div></div><button class="heart" data-favf="${esc(f[0])}" aria-label="Favori">${fav.includes(f[0]) ? '♥' : '♡'}</button><span style="font-size:22px;color:var(--sauge-f);margin-left:4px">+</span></div>`).join('')}
       ${q && !res.length ? '<p class="muted small center">Rien trouvé. Essaie un mot plus simple.</p>' : ''}`;
-    body.innerHTML = q ? resHtml + addedHtml() : addedHtml() + resHtml;
+    body.innerHTML = q ? resHtml + addedHtml() : addedHtml() + mealCard() + resHtml; mealWire();
     body.querySelectorAll('[data-fsub]').forEach(b => b.onclick = () => { fsub = b.dataset.fsub; foodBody(); });
     body.querySelectorAll('[data-favf]').forEach(b => b.onclick = ev => { ev.stopPropagation(); const n = b.dataset.favf, fv = S.favF; const i = fv.indexOf(n); if (i >= 0) fv.splice(i, 1); else fv.unshift(n); save(); foodBody(); });
     body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().unshift({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
@@ -878,6 +945,9 @@ const ACT = {
   rmFood: v => { const [d, k, i] = v.split('|'); const a = eatOf(d, k); a.splice(+i, 1); save(); render(); },
   unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
+  frigoTog: v => { const f = S.frigo || (S.frigo = []); const i = f.indexOf(v); if (i >= 0) f.splice(i, 1); else f.push(v); save(); render(); },
+  frigoClear: () => { S.frigo = []; save(); render(); },
+  frigoCourses: v => { const x = frigoList().find(e => String(e.r.id) === String(v)); if (!x) return; const m = S.cMine || (S.cMine = []); x.miss.forEach(t => { if (!m.some(e => e.t.toLowerCase() === t.toLowerCase())) m.push({ t, d: 0 }); }); save(); toast(x.miss.length > 1 ? 'Ajoutés à tes courses' : 'Ajouté à tes courses'); },
   day: v => { ui.day = v; render(); },
   filter: v => { ui.filter = v; render(); },
   slotToggle: v => { const h = S.hide || (S.hide = []); const i = h.indexOf(v); if (i >= 0) h.splice(i, 1); else if (h.length >= SLOTS.length - 1) return toast('Garde au moins un repas'); else h.push(v); save(); render(); },
