@@ -925,6 +925,7 @@ function vProfil() {
   <div class="card mt2"><span class="lab">Mes repas</span><p class="small muted" style="margin:6px 0 0">Choisis les repas qui s'affichent dans Ma journée et Ma semaine. Tu jeûnes le matin ? Retire le petit-déj.</p>${slotChips()}</div>
   <a class="card tap row" href="${C.shop}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Ma boutique</span><div>Commander chez Clem</div></div><span>›</span></a>
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
+  <a class="card tap row" href="mailto:clemence@belles-soeurs.com?subject=${encodeURIComponent('Le Club Clem')}" style="text-decoration:none"><div class="grow"><span class="lab">Une question, une idée ?</span><div>Contacter Clem</div><div class="small muted">clemence@belles-soeurs.com</div></div><span>✉️</span></a>
   ${installHint()}
   <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Ton journal et tes mesures restent sur ton téléphone. Tes favoris, ta semaine et ton rituel sont sauvegardés de façon privée sur ton compte.</p></div>
   <button class="btn ghost full mt" data-act="logout">Me déconnecter</button>`;
