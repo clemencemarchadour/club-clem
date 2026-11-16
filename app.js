@@ -550,7 +550,7 @@ function parseMeal(txt) {
     const name = out.join(' '), sg = name ? suggest(name) : [];
     if (!sg.length) return { raw, f: null };
     let f = sg.find(x => norm(x[0]).startsWith(name)) || sg[0];
-    if (!mult && !f[5]) { const fu = sg.find(x => x[5] && norm(x[0]).split(' ')[0].replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')); if (fu && fu[5]) f = fu; }
+    if (!mult && !f[5]) { const fu = sg.find(x => x[5] && norm(x[0]).split(' ')[0].replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')); if (fu && fu[5]) f = fu; else if (q && q < 20) { const any = sg.find(x => x[5]); if (any) f = any; } }
     if (mult && f[5] && unitWord) return { raw, f: f[0], q: q || 1, u: 'u' };
     if (mult) return { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
     if (f[5]) return { raw, f: f[0], q: q || 1, u: 'u' };
@@ -706,15 +706,20 @@ function vBouger() {
 function actsCard(t) {
   const xs = (S.acts && S.acts[t]) || [], f = ui.actForm, tot = xs.reduce((a, x) => a + (+x.m || 0), 0);
   return `<div class="card acts"><div class="row between" style="align-items:center"><h3 class="serif" style="margin:0 0 4px;font-size:22px">J'ai bougé ${t === today() ? "aujourd'hui" : 'hier'}</h3>${xs.length ? `<span class="pill" style="background:var(--ivoire)">${tot} min</span>` : ''}</div>
-  ${xs.length ? xs.map((x, i) => `<div class="actline"><span class="actok">✓</span><span class="grow">${esc(x.a)}</span><b>${x.m} min</b><button class="heart" data-act="actRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('') : (f ? '' : '<p class="small" style="margin:0 0 4px;color:var(--txt2)">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
+  ${xs.length ? xs.map((x, i) => `<div class="actline"><span class="actok">✓</span><span class="grow">${esc(x.a)}${x.pas ? `<span class="small muted"> · ${(+x.pas).toLocaleString('fr-FR')} pas · ${String(x.km).replace('.', ',')} km</span>` : ''}</span><b>${x.pas ? '≈ ' : ''}${x.m} min</b><button class="heart" data-act="actRm" data-v="${i}" aria-label="Retirer">×</button></div>`).join('') : (f ? '' : '<p class="small" style="margin:0 0 4px;color:var(--txt2)">Marche, course, vélo, cours de yoga… Tout ce que tu fais en dehors de l\'app compte aussi.</p>')}
   ${f ? `<p class="lab mt">Qu'as-tu fait ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${SPORTS.map(a => `<button class="chip ${f.a === a ? 'on' : ''}" data-act="actA" data-v="${a}">${a}</button>`).join('')}</div>
   ${f.a === 'Autre' ? `<div class="field mt"><input id="act_o" placeholder="Ex. : tennis, randonnée…" value="${esc(f.o || '')}"></div>` : ''}
+  ${f.a === 'Marche' ? `<div class="chips mt" style="overflow:visible"><button class="chip ${!f.pm ? 'on' : ''}" data-act="actPM" data-v="">En minutes</button><button class="chip ${f.pm ? 'on' : ''}" data-act="actPM" data-v="1">En nombre de pas</button></div>` : ''}
+  ${f.a === 'Marche' && f.pm ? `<p class="lab mt">Combien de pas ?</p><div class="field"><input id="act_p" inputmode="numeric" placeholder="Ex. : 8000 (regarde ta montre ou ton téléphone)" value="${esc(f.p || '')}"></div><p class="small" id="act_conv" style="margin:6px 0 0;color:var(--sauge-f)">${pasTxt(f.p)}</p>` : `
   <p class="lab mt">Combien de temps ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${[15, 30, 45, 60, 90].map(m => `<button class="chip ${f.m == m ? 'on' : ''}" data-act="actM" data-v="${m}">${m} min</button>`).join('')}</div>
-  <div class="field mt"><input id="act_m" inputmode="numeric" placeholder="Ou tape le nombre de minutes" value="${f.m && ![15, 30, 45, 60, 90].includes(+f.m) ? f.m : ''}"></div>
+  <div class="field mt"><input id="act_m" inputmode="numeric" placeholder="Ou tape le nombre de minutes" value="${f.m && ![15, 30, 45, 60, 90].includes(+f.m) ? f.m : ''}"></div>`}
   <div class="grid2 mt"><button class="btn ghost sm" data-act="actCancel">Annuler</button><button class="btn sm" data-act="actSave">Enregistrer</button></div>`
   : `<button class="btn full mt" data-act="actOpen" style="background:var(--sauge-f);border-color:var(--sauge-f)">+ Ajouter une activité</button>`}</div>`;
 }
-function keepAct() { const f = ui.actForm; if (!f) return; const o = $('#act_o'), m = $('#act_m'); if (o) f.o = o.value; if (m && m.value) f.m = m.value; }
+const pasN = v => parseInt(String(v || '').replace(/\D/g, '')) || 0;
+const pasKm = p => Math.round(p * 0.7 / 100) / 10;
+const pasTxt = v => { const p = pasN(v); return p ? `${p.toLocaleString('fr-FR')} pas ≈ ${String(pasKm(p)).replace('.', ',')} km de marche · environ ${Math.round(p / 100)} min` : 'En moyenne, 1 000 pas font environ 700 m.'; };
+function keepAct() { const f = ui.actForm; if (!f) return; const o = $('#act_o'), m = $('#act_m'), p = $('#act_p'); if (o) f.o = o.value; if (m && m.value) f.m = m.value; if (p) f.p = p.value; }
 function seanceCard(id, s) {
   const ids = [...new Set(s.steps.map(x => x[0]))].slice(0, 4);
   return `<div class="card tap" data-go="bouger|seance|${id}"><div class="row between"><div><div class="serif" style="font-size:18px">${esc(s.t)}</div><div class="small muted">${s.d} min · ${s.steps.length} exercices${s.rounds ? ' · ' + s.rounds + ' tours' : ''}</div></div><span class="pill">Go</span></div>
@@ -1000,11 +1005,16 @@ const ACT = {
   actOpen: () => { ui.actForm = { a: '', m: '' }; render(); },
   actCancel: () => { ui.actForm = null; render(); },
   actA: v => { keepAct(); ui.actForm.a = v; render(); },
+  actPM: v => { keepAct(); ui.actForm.pm = !!v; render(); },
   actM: v => { keepAct(); ui.actForm.m = v; render(); },
   actSave: () => {
     keepAct(); const f = ui.actForm, t = JD();
-    const a = f.a === 'Autre' ? (f.o || '').trim() || 'Autre activité' : f.a, m = parseInt(f.m);
+    const a = f.a === 'Autre' ? (f.o || '').trim() || 'Autre activité' : f.a;
     if (!f.a) { toast('Choisis ton activité'); return; }
+    if (f.a === 'Marche' && f.pm) { const p = pasN(f.p); if (p < 100 || p > 100000) { toast('Indique ton nombre de pas'); return; }
+      const mm = Math.max(1, Math.round(p / 100)); S.acts = S.acts || {}; (S.acts[t] = S.acts[t] || []).push({ a, m: mm, pas: p, km: pasKm(p) }); S.moves[t] = (S.moves[t] || 0) + mm;
+      ui.actForm = null; save(); render(); toast('Marche ajoutée 🤎'); return; }
+    const m = parseInt(f.m);
     if (!m || m < 1 || m > 600) { toast('Indique la durée en minutes'); return; }
     S.acts = S.acts || {}; (S.acts[t] = S.acts[t] || []).push({ a, m }); S.moves[t] = (S.moves[t] || 0) + m;
     ui.actForm = null; save(); render(); toast('Activité ajoutée 🤎');
@@ -1073,6 +1083,7 @@ document.addEventListener('change', e => {
   img.src = url;
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'act_p') { const c = $('#act_conv'); if (c) c.textContent = pasTxt(e.target.value); if (ui.actForm) ui.actForm.p = e.target.value; return; }
   if (e.target.id === 'fq') { ui.fq = e.target.value; const d = document.createElement('div'); d.innerHTML = vFrigo(); const box = $('#fchips'), nb = d.querySelector('#fchips'); if (box && nb) { box.innerHTML = nb.innerHTML; box.querySelectorAll('[data-act]').forEach(b => b.onclick = ev => { ev.stopPropagation(); ACT[b.dataset.act](b.dataset.v, b); }); } return; }
   if (e.target.id === 'rq') { ui.q = e.target.value; const box = document.querySelector('.rlist'); if (box) box.innerHTML = rList(filtered()); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined && ui.draft) { const i = +e.target.dataset.row; ui.draft.rows[i][e.target.dataset.k] = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock();
