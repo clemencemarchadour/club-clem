@@ -226,7 +226,7 @@ function bind() {
   app.querySelectorAll('[data-go]').forEach(b => b.onclick = e => { e.stopPropagation(); const [t, s, a] = b.dataset.go.split('|'); go(t, s || null, a || null); });
   app.querySelectorAll('[data-act]').forEach(b => b.onclick = e => { e.stopPropagation(); ACT[b.dataset.act](b.dataset.v, b); });
 }
-const prenom = () => (ME && ME.prenom) || '';
+const prenom = () => (S.prenom || (ME && ME.prenom) || '').trim();
 const avatarInner = () => S.photo ? `<img src="${S.photo}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : esc((prenom() || 'C').charAt(0).toUpperCase());
 let MEMBERS = 0;
 function headBlock() {
@@ -1014,7 +1014,7 @@ function vGuide() {
 function vProfil() {
   return `${back('Ma journée', 'journee')}
   <div class="center"><label style="cursor:pointer;display:inline-block"><div class="avatar" style="width:88px;height:88px;font-size:36px;margin:0 auto;overflow:hidden">${avatarInner()}</div><input type="file" accept="image/*" id="photo" style="display:none"><div class="small muted mt" style="text-decoration:underline">${S.photo ? 'Changer ma photo' : 'Ajouter ma photo'}</div></label>
-  ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><p class="small muted">${esc(USER.email || '')}</p></div>
+  ${S.photo ? '<div><button class="link small" data-act="rmPhoto">Retirer la photo</button></div>' : ''}${ui.nameEd ? `<div class="mt" style="display:flex;gap:8px;max-width:300px;margin-left:auto;margin-right:auto"><input id="pn" value="${esc(prenom())}" placeholder="Ton prénom" maxlength="30" autocomplete="given-name" style="flex:1"><button class="btn" data-act="nameOk">OK</button></div>` : `<h2 class="mt">${esc(prenom() || 'Mon profil')}</h2><div><button class="link small" data-act="nameEd">${prenom() ? 'Modifier mon prénom' : 'Ajouter mon prénom'}</button></div>`}<p class="small muted">${esc(USER.email || '')}</p></div>
   <div class="grid2 mt"><div class="card" style="margin:0"><span class="lab">Jours actifs</span><div class="serif" style="font-size:26px">${activeDays()}</div></div><div class="card" style="margin:0"><span class="lab">Recettes préférées</span><div class="serif" style="font-size:26px">${S.favs.length}</div></div></div>
   ${badgesBlock()}
   <div class="card mt2"><span class="lab">Mes repas</span><p class="small muted" style="margin:6px 0 0">Choisis les repas qui s'affichent dans Ma journée et Ma semaine. Tu jeûnes le matin ? Retire le petit-déj.</p>${slotChips()}</div>
@@ -1028,6 +1028,8 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  nameEd: () => { ui.nameEd = true; render(); setTimeout(() => { const n = $('#pn'); if (n) { n.focus(); n.select(); } }, 50); },
+  nameOk: () => { const n = $('#pn'), v = n ? n.value.trim().replace(/\s+/g, ' ').slice(0, 30) : ''; if (v) { S.prenom = v.charAt(0).toUpperCase() + v.slice(1); save(); try { sb.from('members').update({ prenom: S.prenom }).eq('email', (USER.email || '').toLowerCase()).then(() => {}, () => {}); } catch (e) {} } ui.nameEd = false; render(); },
   essTake: v => { const t = JD(); const o = (L.essT = L.essT || {})[t] = L.essT[t] || {}; o[v] = !o[v]; save(); render(); },
   essOpen: () => { ui.essForm = { m: 'matin' }; render(); setTimeout(() => { const n = $('#ess_n'); if (n) n.focus(); }, 50); },
   essM: v => { keepEss(); ui.essForm.m = v; render(); },
@@ -1174,6 +1176,7 @@ document.addEventListener('input', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.target.id === 'rq' || e.target.id === 'fq')) { e.target.blur(); return; }
   if (e.key === 'Enter' && e.target.id === 'cAdd') { e.preventDefault(); ACT.cAdd(); return; }
+  if (e.key === 'Enter' && e.target.id === 'pn') { e.preventDefault(); ACT.nameOk(); return; }
   const t = e.target; if (e.key !== 'Enter' || !t.dataset || t.dataset.row === undefined || !ui.draft) return;
   e.preventDefault(); const i = +t.dataset.row, k = t.dataset.k, rows = ui.draft.rows, r = rows[i];
   const focus = (row, key) => setTimeout(() => { const el = document.querySelector(`[data-row="${row}"][data-k="${key}"]`); if (el) { el.focus(); if (el.select) el.select(); } }, 30);
