@@ -370,7 +370,8 @@ const OUT_W = [['resto', 'Resto'], ['amis', 'Chez des amis ou en famille'], ['em
 const fVals = e => { if (e.out) { const o = OUT_S.find(x => x[0] === e.out.s); return { kcal: o ? o[2] : 0, p: 0, g: 0, l: 0 }; }
   return fVals0(e); };
 const fVals0 = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
-const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${f[6]}${+e.q > 1 && f[6].length < 12 ? 's' : ''}` : `${q} g`; };
+const plu = (u, q) => { if (!u || +q <= 1) return u; const w = u.split(' '); if (/[sx]$/.test(w[0])) return u; w[0] = w[0] + (/(eau|eu)$/.test(w[0]) ? 'x' : 's'); return w.join(' '); };
+const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${plu(f[6], e.q)}` : `${q} g`; };
 function dayTotal(day) {
   const plan = S.plan[day] || {}, tot = { kcal: 0, p: 0, g: 0, l: 0 };
   SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
@@ -509,14 +510,15 @@ function vAjout() {
     return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input enterkeyhint="next" data-row="${i}" data-k="f" placeholder="Tape un aliment : œuf, riz, pomme…" value="${esc(r.f)}" autocomplete="off" autocorrect="off" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
     <div id="sug_${i}"></div>
     <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" enterkeyhint="next" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
-    <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
+    <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
   <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
   <div id="o_tot">${totBlock()}</div></div>
   <div class="field mt"><label>Préparation (facultatif, une étape par ligne)</label><textarea id="o_steps">${esc(d.steps || '')}</textarea></div>
   <button class="btn full mt" data-act="saveOwn">Enregistrer</button>`;
 }
 const norm = t => String(t || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-const sing = w => w.length > 3 ? w.replace(/(s|x)$/, '') : w;
+const sing = w => { w = w.length > 3 ? w.replace(/(s|x)$/, '') : w; return w.length > 3 ? w.replace(/ee$/, 'e') : w; };
+const SOFT = new Set(['poele', 'poelee', 'grille', 'grillee', 'vapeur', 'saute', 'sautee', 'roti', 'rotie', 'cuit', 'cuite', 'maison', 'braise', 'braisee', 'mijote', 'four', 'rape', 'rapee', 'frai', 'fraiche', 'nature', 'chaud', 'chaude', 'froid', 'froide', 'leger', 'legere', 'brouille', 'brouillee', 'poche', 'pochee']);
 const splitQty = t => { const m = String(t || '').trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:g\b|gr\b|grammes?\b)?\s*(?:de |d')?(.*)$/i); return m ? { q: m[1].replace(',', '.'), g: /^\d+(?:[.,]\d+)?\s*(g|gr|gramme)/i.test(t), name: m[2] } : { q: '', name: t }; };
 const STOP = new Set(['de', 'des', 'du', 'la', 'le', 'les', 'au', 'aux', 'a', 'en', 'et', 'd', 'l', 'un', 'une', 'avec', 'sans', 'g', 'gr']);
 let FIDX = null;
@@ -525,9 +527,10 @@ function suggest(t) {
   const full = norm(splitQty(t).name), words = full.split(' ').filter(w => w && !STOP.has(w)).map(sing);
   if (!words.length) return [];
   const score = (strict) => fidx().map(({ f, n, w: nw }) => { let sc = 0, hit = 0;
-    for (const w of words) { if (nw.includes(w)) { sc += 3; hit++; } else if (nw.some(x => x.startsWith(w))) { sc += 2; hit++; } else if (w.length > 3 && n.includes(w)) { sc += 1; hit++; } else if (strict) return null; }
-    if (!hit) return null; if (!strict) sc -= (words.length - hit) * 3;
-    if (nw[0] === words[0] || nw[0].startsWith(words[0])) sc += 2;
+    const hard = words.filter(w => !SOFT.has(w)), need = hard.length ? hard : words;
+    for (const w of words) { const ws = w.replace(/e$/, ''); if (nw.includes(w) || nw.some(x => x.replace(/e$/, '') === ws)) { sc += SOFT.has(w) ? 1 : 3; hit++; } else if (nw.some(x => x.startsWith(w))) { sc += SOFT.has(w) ? 0.5 : 2; hit++; } else if (w.length > 3 && n.includes(w)) { sc += 1; hit++; } else if (strict && need.includes(w)) return null; }
+    if (!hit) return null; if (!strict) sc -= (need.length - Math.min(hit, need.length)) * 3;
+    if (nw[0] === need[0] || nw[0].startsWith(need[0])) sc += 2;
     if (!words.some(w => w.startsWith('cru')) && /\bcrue?s?\b/.test(n)) sc -= 2.5;
     if (f[7]) sc += 2.5; if (n === full || n.split(' ').map(sing).join(' ') === full.split(' ').map(sing).join(' ')) sc += 10; return [sc - n.length / 60, f]; }).filter(Boolean).sort((x, y) => y[0] - x[0]).slice(0, 8).map(x => x[1]);
   const r = score(true); return r.length ? r : score(false);
@@ -535,7 +538,8 @@ function suggest(t) {
 const NUMW = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, demi: 0.5, demie: 0.5, moitie: 0.5, quart: 0.25, quarts: 0.25, tiers: 0.33 };
 const UNITW = [[/^(kg|kilos?)$/, 1000], [/^(g|gr|grs|grammes?)$/, 1], [/^(ml)$/, 1], [/^(cl)$/, 10], [/^(l|litres?)$/, 1000], [/^(cs|cas|soupe)$/, 15], [/^(cc|cac|cafe)$/, 5], [/^(tranches?)$/, 30], [/^(bols?)$/, 250], [/^(verres?)$/, 200], [/^(poignees?)$/, 30], [/^(pots?)$/, 125], [/^(sachets?)$/, 10], [/^(carres?)$/, 10]];
 function parseMeal(txt) {
-  return String(txt || '').split(/[,;\n+]|\bet\b|\bavec\b|\bpuis\b|\bplus\b/i).map(x => x.trim()).filter(Boolean).map(raw => {
+  const segs = String(txt || '').replace(/\d+([.,]\d+)?\s*%/g, ' ').replace(/omelettes?\s+(?:de\s+|à\s+|a\s+)?(\d+)\s+(oeufs?|œufs?)/gi, '$1 œufs').split(/[,;\n+]|\bet\b|\bavec\b|\bpuis\b|\bplus\b/i).map(x => x.trim()).filter(Boolean);
+  return segs.map(x => /^(?:(?:une?|\d+)\s+)?salades?\s+(de\s+|d')\S+\s+\S/i.test(x) ? x.replace(/^(?:(?:une?|\d+)\s+)?salades?\s+(de\s+|d')/i, '') : x).flatMap(raw => {
     let unitWord = false, w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2')).replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
     const out = [];
     for (let i = 0; i < w.length; i++) {
@@ -543,19 +547,29 @@ function parseMeal(txt) {
       if (/^\d+([.,]\d+)?$/.test(x)) { q = (q && q < 1 ? q : 0) + parseFloat(x.replace(',', '.')); continue; }
       if (/^\d+frac\d+$/.test(x)) { const [a, b] = x.split('frac'); q = (q || 0) + a / b; continue; }
       if (x in NUMW && out.length === 0 && !mult) { const v = NUMW[x]; q = v < 1 ? (q && q >= 1 && x !== 'demi' ? q * v : v) : (q && q < 1 ? q * v : v); if (/^quarts?$/.test(x) && w[i - 1] === 'trois') q = 0.75; continue; }
-      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult && (!/^(soupe|cafe)$/.test(x) || /^(a|c|cuilleres?)$/.test(w[i - 1] || ''))) { mult = u[1]; unitWord = /^(tranches?|carres?|pots?|sachets?|poignees?)$/.test(x); continue; }
-      if ((x === 'c' || x === 'cuillere' || x === 'cuilleres' || x === 'a' || x === 'la' || x === 'de' || x === 'd' || x === 'des' || x === 'du' || x === 'l') && out.length === 0) continue;
+      if (/^filets?$/.test(x) && out.length === 0 && !mult && /huile|vinaigre|citron|miel|sauce|creme|sirop/.test(w.slice(i + 1).join(' '))) { mult = 5; continue; }
+      if (/^(morceaux?|portions?|parts?)$/.test(x) && out.length === 0 && !mult) { unitWord = true; mult = 30; continue; }
+      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult && (!/^(soupe|cafe)$/.test(x) || /^(a|c|cuilleres?)$/.test(w[i - 1] || ''))) { mult = /^verres?$/.test(x) && /vin|champagne|biere/.test(w.slice(i + 1).join(' ')) ? (/biere/.test(w.join(' ')) ? 250 : 125) : u[1]; unitWord = /^(tranches?|carres?|pots?|sachets?)$/.test(x); continue; }
+      if ((x === 'c' || x === 'cuillere' || x === 'cuilleres' || x === 'a' || x === 'la' || x === 'de' || x === 'd' || x === 'des' || x === 'du' || x === 'l' || x === 'aux' || x === 'au') && out.length === 0) continue;
       out.push(x);
     }
     const name = out.join(' '), sg = name ? suggest(name) : [];
-    if (!sg.length) return { raw, f: null };
+    if (!sg.length) return [{ raw, f: null }];
     let f = sg.find(x => norm(x[0]).startsWith(name)) || sg[0];
-    if (!mult && !f[5]) { const fu = sg.find(x => x[5] && norm(x[0]).split(' ')[0].replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === norm(f[0]).split(' ')[0].replace(/s$/, '')); if (fu && fu[5]) f = fu; else if (q && q < 20) { const any = sg.find(x => x[5]); if (any) f = any; } }
-    if (mult && f[5] && unitWord) return { raw, f: f[0], q: q || 1, u: 'u' };
-    if (mult) return { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
-    if (f[5]) return { raw, f: f[0], q: q || 1, u: 'u' };
-    if (q && q >= 20) return { raw, f: f[0], q, u: 'g' };
-    return { raw, f: f[0], q: 100, u: 'g', check: true };
+    if (out.length > 1 && !out.some(x => /^(de|d|du|des|a|au|aux|l|la|le|en)$/.test(x))) { const w0 = sing(out[0]), fw0 = sing(norm(f[0]).split(' ')[0]); if (!(fw0 === w0 || fw0.startsWith(w0) || w0.startsWith(fw0))) { const alt = suggest(out[0]).find(x => { const y = sing(norm(x[0]).split(' ')[0]); return y === w0 || y.startsWith(w0); }); if (alt) f = alt; } }
+    if (!mult && !f[5]) { const base = norm(f[0]).split(' ')[0].replace(/s$/, ''); const fu = sg.find(x => x[5] && norm(x[0]).replace(/s$/, '') === base) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === base); if (fu && fu[5]) f = fu; else if (q && q < 20) { const any = sg.find(x => x[5]); if (any) f = any; } }
+    let row;
+    if (mult && f[5] && unitWord) row = { raw, f: f[0], q: q || 1, u: 'u' };
+    else if (mult) row = { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
+    else if (f[5] && !q && f[5] >= 250 && norm(f[0]).startsWith(norm(f[6]))) row = { raw, f: f[0], q: 150, u: 'g', check: true };
+    else if (f[5]) row = { raw, f: f[0], q: q || 1, u: 'u' };
+    else if (q && q >= 20) row = { raw, f: f[0], q, u: 'g' };
+    else row = { raw, f: f[0], q: 100, u: 'g', check: true };
+    // mots restants (ex. « omelette aux champignons », « tomates mozzarella ») : un aliment en plus
+    const fw = norm(f[0]).split(' ').map(sing), left = out.map(sing).filter(x => x.length > 2 && !STOP.has(x) && !SOFT.has(x) && !fw.some(y => y === x || y.startsWith(x) || x.startsWith(y)));
+    const rows = [row];
+    if (left.length) { const s2 = suggest(left.join(' ')); const g = s2.find(x => { const y = sing(norm(x[0]).split(' ')[0]); return y === left[0] || y.startsWith(left[0]); }); if (g && g[0] !== f[0]) rows.push(g[5] && g[5] >= 60 && g[5] < 250 ? { raw: left.join(' '), f: g[0], q: 1, u: 'u' } : { raw: left.join(' '), f: g[0], q: 50, u: 'g', check: true }); }
+    return rows;
   });
 }
 const foodOf = n => C.foods.find(f => f[0].toLowerCase() === String(n || '').trim().toLowerCase());
@@ -629,13 +643,13 @@ function pickSheet(day, slot, mode = 'f') {
     return `<div class="card" style="padding:12px 14px"><div class="row between"><span class="lab">Dans ce repas</span><span class="small muted">${k} kcal</span></div>
     ${a.map((e, i) => { if (e.out) return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div><div class="small muted" style="margin-top:4px">environ ${Math.round(fVals(e).kcal)} kcal · estimation</div></div>`; const f = foodOf(e.f) || []; return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div>
       <div class="row" style="gap:8px;margin-top:6px"><button class="stp" data-st="${i}|-1">−</button><input inputmode="decimal" data-q="${i}" value="${esc(String(e.q).replace('.', ','))}" style="flex:1;text-align:center;padding:8px">
-      <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}${f[6].length < 12 ? '(s)' : ''}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
+      <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
       <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
     <p class="fine center" style="margin:10px 0 0">Ajoute tous tes aliments, puis touche <b>Terminé</b> en haut.</p></div>`; };
   let meal = null;
   const mealCard = () => `<div class="card acts" style="padding:14px 16px;margin-top:12px"><div class="serif" style="font-size:18px">✍️ Écris ce que tu as mangé</div>
     <textarea data-meal rows="3" placeholder="Ex. : 2 œufs brouillés, 50 g de blanc d'œuf, 100 g de poulet, un demi-avocat" style="width:100%;margin-top:8px;padding:10px;border-radius:14px;border:1px solid var(--filet);font:inherit;resize:vertical">${esc(meal ? meal.txt : '')}</textarea>
-    ${meal && meal.rows ? `<div style="margin-top:8px">${meal.rows.map((r, i) => r.f ? `<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--filet)"><span class="small">${esc(r.f)} · <b>${r.u === 'u' ? String(r.q).replace('.', ',') + ' ' + esc(((foodOf(r.f) || [])[6] || '') + (r.q > 1 && ((foodOf(r.f) || [])[6] || '').length < 12 && !/s$/.test((foodOf(r.f) || [])[6] || '') ? 's' : '')) : r.q + ' g'}</b>${r.check ? ' <span style="color:var(--or)">(quantité à vérifier)</span>' : ''}</span><span class="small muted">${Math.round(fVals(r).kcal)} kcal <button class="heart" data-mrm="${i}">×</button></span></div>` : `<div class="small" style="padding:5px 0;color:var(--or)">Je n'ai pas reconnu « ${esc(r.raw)} » : ajoute-le avec la recherche. <button class="heart" data-mrm="${i}">×</button></div>`).join('')}</div>
+    ${meal && meal.rows ? `<div style="margin-top:8px">${meal.rows.map((r, i) => r.f ? `<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--filet)"><span class="small">${esc(r.f)} · <b>${r.u === 'u' ? String(r.q).replace('.', ',') + ' ' + esc(plu((foodOf(r.f) || [])[6] || '', r.q)): r.q + ' g'}</b>${r.check ? ' <span style="color:var(--or)">(quantité à vérifier)</span>' : ''}</span><span class="small muted">${Math.round(fVals(r).kcal)} kcal <button class="heart" data-mrm="${i}">×</button></span></div>` : `<div class="small" style="padding:5px 0;color:var(--or)">Je n'ai pas reconnu « ${esc(r.raw)} » : ajoute-le avec la recherche. <button class="heart" data-mrm="${i}">×</button></div>`).join('')}</div>
       <div class="grid2 mt"><button class="btn ghost sm" data-mcalc>Recalculer</button><button class="btn sm" data-madd ${meal.rows.some(r => r.f) ? '' : 'disabled'}>Ajouter</button></div>` : `<button class="btn full mt" data-mcalc style="background:var(--sauge-f);border-color:var(--sauge-f)">Calculer</button>`}</div>`;
   const mealWire = () => {
     const ta = body.querySelector('[data-meal]'); if (!ta) return;
