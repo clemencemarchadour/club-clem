@@ -35,7 +35,8 @@ let ui = { tab: 'journee', sub: null, arg: null, tableSeg: 'semaine', filter: 'a
 /* ---------- dates ---------- */
 const pad = n => String(n).padStart(2, '0');
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const today = () => iso(new Date());
+const dayNow = () => new Date(Date.now() - 4 * 3600e3); // la journée bascule à 4 h du matin
+const today = () => iso(dayNow());
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
 const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
@@ -265,7 +266,7 @@ function activeDays() {
 const medal = (b, cls = '') => `<div class="med t${b[3]} ${cls}"><b>${b[4]}</b><span>${b[5]}</span></div>`;
 let badgeShown = false;
 function motDuJour() {
-  const t = today(), d = new Date(), md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const t = today(), d = dayNow(), md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   return (C.special && C.special[md]) || C.mots[((diffDays('2026-11-09', t) % C.mots.length) + C.mots.length) % C.mots.length];
 }
 function showMot(after) {
@@ -326,7 +327,7 @@ function streak() {
 }
 const JD = () => ui.tab === 'journee' && ui.jd && ui.jd === addDays(today(), -1) ? ui.jd : today();
 function vJournee() {
-  const t = JD(), d = new Date(), yest = t !== today();
+  const t = JD(), d = dayNow(), yest = t !== today();
   const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const mot = motDuJour();
   const plan = S.plan[t] || {};
@@ -927,7 +928,7 @@ function vRituel() {
   ${S.mine.gut && !pr.find(p => p.id === 'gut') ? '<p class="small muted mt">Gut & Balance : pas de prise aujourd’hui, on est en un jour sur deux.</p>' : ''}
   </div>
   ${essCard(t)}
-  <div class="card"><span class="lab">${cap(MOIS[new Date().getMonth()])}</span>${calendar()}</div>
+  <div class="card"><span class="lab">${cap(MOIS[dayNow().getMonth()])}</span>${calendar()}</div>
   <div class="row between mt2"><h3>Mes compléments</h3><button class="link" data-go="rituel|choix|">Modifier</button></div>
   ${C.produits.filter(p => S.mine[p.id]).map(p => `<div class="card tap row" data-go="rituel|fiche|${p.id}" style="padding:12px"><img class="prod" src="${p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(p.name)}</div><div class="small muted">${stockLeft(p.id) > 0 ? `Stock : environ ${stockLeft(p.id)} jour${stockLeft(p.id) > 1 ? 's' : ''}` : 'Stock terminé'}</div></div><span class="muted">›</span></div>`).join('')}
   <h3 class="mt2">Toute la gamme</h3>
@@ -936,7 +937,7 @@ function vRituel() {
   <p class="fine mt">Les compléments alimentaires ne remplacent pas une alimentation variée et équilibrée ni un mode de vie sain. Ne pas dépasser la dose journalière recommandée. Tenir hors de portée des enfants.</p>`;
 }
 function calendar() {
-  const d = new Date(), y = d.getFullYear(), m = d.getMonth(), first = new Date(y, m, 1), n = new Date(y, m + 1, 0).getDate();
+  const d = dayNow(), y = d.getFullYear(), m = d.getMonth(), first = new Date(y, m, 1), n = new Date(y, m + 1, 0).getDate();
   const off = (first.getDay() + 6) % 7; let h = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<div class="small muted">${x}</div>`).join('') + '<div></div>'.repeat(off);
   for (let i = 1; i <= n; i++) {
     const k = `${y}-${pad(m + 1)}-${pad(i)}`, pr = todayPrises(k), tk = S.taken[k] || {}, c = pr.filter(p => tk[p.id]).length;
