@@ -560,7 +560,8 @@ function parseMeal(txt) {
       out.push(x);
     }
     const name = out.join(' '), sg = name ? suggest(name) : [];
-    if (!sg.length) return [{ raw, f: null }];
+    const _n = norm(name).split(' ').map(sing).join(' ');
+    if (!sg.length && !(ALIAS[_n] || ALIAS[_n.split(' ').filter(x => !STOP.has(x)).join(' ')])) return [{ raw, f: null }];
     const nS = v => norm(v).split(' ').map(sing).join(' '), nm = nS(name), nmh = nm.split(' ').filter(x => !STOP.has(x) && !SOFT.has(x)).join(' ');
     const al = ALIAS[nm] || ALIAS[nm.split(' ').filter(x => !STOP.has(x)).join(' ')] || ALIAS[nmh];
     let f = (al && foodOf(al)) || sg.find(x => nS(x[0]) === nm) || sg.find(x => nS(x[0]).startsWith(nm + ' ') && !/grenaille/.test(nS(x[0]))) || sg.find(x => nS(x[0]).startsWith(nm)) || sg[0];
