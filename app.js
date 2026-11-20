@@ -272,6 +272,8 @@ function motDuJour() {
 function showMot(after) {
   if (L.motSeen === today() || document.querySelector('.bmodal')) return after && after();
   L.motSeen = today(); save();
+  const ph = bsdPhase();
+  if (ph && (S.bsdSeen || {})[ph] !== 1) return showBsd(ph, after);
   const h = new Date().getHours(), p = prenom();
   const hi = (h < 12 ? 'Bonjour' : h < 18 ? 'Bel après-midi' : 'Bonsoir') + (p ? ' ' + p : '');
   const o = document.createElement('div'); o.className = 'bmodal';
@@ -280,6 +282,20 @@ function showMot(after) {
   <button class="btn full" id="bok">Merci Clem</button></div>`;
   document.body.appendChild(o);
   o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
+}
+function showBsd(ph, after) {
+  S.bsdSeen = S.bsdSeen || {}; S.bsdSeen[ph] = 1; save();
+  const av = ph === 'avant', p = prenom();
+  const o = document.createElement('div'); o.className = 'bmodal';
+  o.innerHTML = `<div class="bbox" style="padding:0;overflow:hidden"><img src="img/ban/v4.jpg" alt="" style="width:100%;height:170px;object-fit:cover;object-position:50% 56%;display:block">
+  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or)">Belles Sœurs Days · ${av ? 'Dès le 22 novembre' : "C'est parti"}</span>
+  <h2 class="serif" style="font-size:27px;line-height:1.15;margin:12px 0 0">${av ? `${p ? esc(p) + ', ton' : 'Ton'} mois de Collagène Liquide offert` : `${p ? esc(p) + ', c' : 'C'}'est le moment !`}</h2>
+  <p class="muted" style="margin:12px 0 0;line-height:1.5">${av ? `Je voulais que tu sois la première au courant : à partir du 22 novembre, ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.` : `Les Belles Sœurs Days ont commencé : ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.`}</p>
+  ${av ? `<button class="btn full" style="margin-top:20px" id="bgo">Découvrir mon cadeau</button>` : `<a class="btn full" style="margin-top:20px" id="bgo" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
+  <button class="link" style="margin-top:14px" id="bok">Plus tard</button></div></div>`;
+  document.body.appendChild(o);
+  o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
+  o.querySelector('#bgo').onclick = () => { o.remove(); if (av) go('rituel', 'fiche', 'collagene'); };
 }
 function checkBadges() {
   if (!S || !L || badgeShown || document.querySelector('.bmodal')) return;
@@ -335,8 +351,10 @@ function vJournee() {
   const ess = essList(), nTot = prises.length + ess.length;
   const done = prises.filter(p => (S.taken[t] || {})[p.id]).length + ess.filter(e => essOn(t, e.id)).length;
   const nav = `<div class="row between" style="margin:0 0 10px">${yest ? `<span class="lab">Ma journée d'hier</span><button class="link" data-act="jdGo" data-v="0">Aujourd'hui ›</button>` : `<button class="link" data-act="jdGo" data-v="-1">‹ Compléter hier</button><span></span>`}</div>`;
+  if (ui.sub === 'prep' && bsdPhase()) return vPrep();
+  const bsd = !yest && bsdPhase();
   return `${headBlock()}
-  ${nav}
+  ${nav}${bsd ? bsdBanner(bsd) + prepCard() : ''}
   ${yest ? `<div class="card" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
     <h2 class="mt">Ta journée d'hier</h2>
     <p class="muted" style="margin:8px 0 0">Tu as oublié de noter quelque chose ? Coche ton rituel, ajoute tes repas, tes verres d'eau ou ton activité d'hier.</p></div>` : `<div class="card"><span class="lab">${esc(longDate(t).toUpperCase())}</span>
@@ -960,7 +978,8 @@ function vFiche(id) {
   ${p.note ? `<div class="note">${esc(p.note)}<div class="lab" style="font-style:normal;margin-top:6px">La note de Clem</div></div>` : ''}
   ${S.mine[id] ? `<div class="card row between" style="background:var(--sauge-c);border-color:var(--sauge-c)"><div><span class="lab" style="color:var(--sauge-f)">Mon stock</span><div>${stockLeft(id) > 0 ? `Environ ${stockLeft(id)} jour${stockLeft(id) > 1 ? 's' : ''}` : 'Terminé'}</div></div><button class="link" data-act="stEdit" data-v="${id}">Modifier</button></div>` : ''}
   <button class="btn ${S.mine[id] ? 'ghost' : ''} full mt" data-act="toggleMine" data-v="${id}">${S.mine[id] ? 'Retirer de mon rituel' : 'Ajouter à mon rituel'}</button>
-  <a class="btn soft full mt" href="${p.link || C.shop}" target="_blank">Commander chez Clem</a>
+  ${id === 'collagene' && bsdPhase() ? bsdFiche(bsdPhase()) : ''}
+  <a class="btn ${id === 'collagene' && bsdPhase() === 'pendant' ? '' : 'soft'} full mt" href="${p.link || C.shop}" target="_blank">${id === 'collagene' && bsdPhase() === 'pendant' ? "J'en profite" : 'Commander chez Clem'}</a>
   ${p.precautions ? `<p class="fine mt2"><b>Précautions.</b> ${esc(p.precautions)}</p>` : ''}
   <p class="fine">Les compléments alimentaires ne remplacent pas une alimentation variée et équilibrée ni un mode de vie sain. Ne pas dépasser la dose journalière recommandée. Tenir hors de portée des enfants.</p>`;
 }
@@ -1033,6 +1052,7 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  prepT: v => { S.prep = S.prep || {}; S.prep[v] = !prepOn(v); save(); render(); },
   nameEd: () => { ui.nameEd = true; render(); setTimeout(() => { const n = $('#pn'); if (n) { n.focus(); n.select(); } }, 50); },
   nameOk: () => { const n = $('#pn'), v = n ? n.value.trim().replace(/\s+/g, ' ').slice(0, 30) : ''; if (v) { S.prenom = v.charAt(0).toUpperCase() + v.slice(1); save(); try { sb.from('members').update({ prenom: S.prenom }).eq('email', (USER.email || '').toLowerCase()).then(() => {}, () => {}); } catch (e) {} } ui.nameEd = false; render(); },
   essTake: v => { const t = JD(); const o = (L.essT = L.essT || {})[t] = L.essT[t] || {}; o[v] = !o[v]; save(); render(); },
@@ -1197,3 +1217,61 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && PL 
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
 boot();
+
+// ===== Belles Sœurs Days =====
+// BSD_PHASE : null (rien), 'avant' (annonce « Dès le 22 »), 'pendant' (offre en ligne).
+// On ne change de phase QUE sur le go de Clem. Retrait automatique après BSD_END. Aperçu : ?bsd=avant ou ?bsd=pendant
+const BSD_PHASE = 'avant', BSD_END = '2026-12-02', BSD_MIN = '145 €';
+const BSD_PREVIEW = (location.search.match(/[?&]bsd=(avant|pendant)/) || [])[1];
+function bsdPhase() {
+  if (BSD_PREVIEW) return BSD_PREVIEW;
+  return BSD_PHASE && today() <= BSD_END ? BSD_PHASE : null;
+}
+const dateCourte = s => { const d = parse(s); return `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS[d.getMonth()]}`; };
+function bsdBanner(ph) {
+  const av = ph === 'avant';
+  const sub = encodeURIComponent('Club Clem · Conseil Belles Sœurs Days');
+  return `<div class="card center" style="border:1.5px solid var(--or);padding:0;overflow:hidden">
+  <img src="img/ban/v4.jpg" style="width:100%;height:190px;object-fit:cover;object-position:50% 56%;display:block" alt="">
+  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or)">Belles Sœurs Days · ${av ? 'Dès le 22 novembre' : 'En ce moment'}</span>
+  <div class="serif" style="font-size:24px;line-height:1.15;margin-top:8px">Ton mois de Collagène Liquide offert</div>
+  <p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? 'À partir du 22 novembre, dans' : 'Dans'} la limite des stocks disponibles.</p>
+  ${av ? `<button class="btn full mt" data-go="rituel|fiche|collagene">Découvrir mon cadeau</button>` : `<a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--filet);display:flex;flex-direction:column;gap:8px;text-align:left">
+  <a style="font-size:13px;color:var(--txt2);text-decoration:none;line-height:1.4" href="mailto:clemence@belles-soeurs.com?subject=${sub}">Un conseil pour choisir ? <u style="color:var(--brun)">Écris-moi</u></a>
+  <a style="font-size:13px;color:var(--txt2);text-decoration:none;line-height:1.4" href="mailto:contact@belles-soeurs.com">Une question sur ta commande ou ta livraison ? <u style="color:var(--brun)">contact@belles-soeurs.com</u></a>
+  </div></div></div>`;
+}
+const prepMine = () => C.produits.filter(p => S.mine[p.id] && !S.mine[p.id].todo && stockEnd(p.id)).sort((a, b) => stockEnd(a.id) < stockEnd(b.id) ? -1 : 1);
+const prepOn = id => S.prep && id in S.prep ? !!S.prep[id] : !!(S.mine[id] && !S.mine[id].todo);
+function prepCard() {
+  const m = prepMine(), n = C.produits.filter(p => prepOn(p.id)).length, f = m[0];
+  const titre = f ? (stockLeft(f.id) > 0 ? `Ton stock de ${esc(f.name)} se termine vers le ${dateCourte(stockEnd(f.id))}` : `Ton stock de ${esc(f.name)} est terminé`) : 'Fais ta liste pour les Belles Sœurs Days';
+  return `<div class="card tap" data-go="journee|prep|"><div class="row between"><span class="lab">Préparer ma commande</span>${n ? `<span class="pill">${n} produit${n > 1 ? 's' : ''}</span>` : ''}</div>
+  <div class="serif" style="font-size:19px;margin-top:8px">${titre}</div>
+  <div class="small muted" style="margin-top:4px">Fais ta liste maintenant, elle reste enregistrée ici.</div></div>`;
+}
+function bsdFiche(ph) {
+  const t = ph === 'avant'
+    ? `<b>Belles Sœurs Days, dès le 22 novembre</b><br>Ton mois de Collagène Liquide offert dès ${BSD_MIN} d'achat. Tu prends ton rituel de 3 mois ? Attends le 22 : à 199 € au lieu de 237 €, ton 4e mois sera offert. Soit 4 mois pour 199 €, d'une valeur de 316 €. Dans la limite des stocks disponibles.`
+    : `<b>C'est le moment</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat. Ton rituel de 3 mois est à 199 € au lieu de 237 €, et ton 4e mois est offert : 4 mois pour 199 €, d'une valeur de 316 €. Dans la limite des stocks disponibles.`;
+  return `<div class="card" style="border:1.5px solid var(--or);background:#FBF5E8;margin-top:16px"><span style="font-size:20px">🎁</span><p style="margin:6px 0 0;line-height:1.45">${t}</p></div>`;
+}
+function prow(p) {
+  const on = prepOn(p.id), mine = S.mine[p.id] && !S.mine[p.id].todo && stockEnd(p.id);
+  const note = mine ? (stockLeft(p.id) > 0 ? `ton stock se termine vers le ${dateCourte(stockEnd(p.id))}` : 'ton stock est terminé') : p.id === 'collagene' ? `offert dès ${BSD_MIN} d'achat` : '';
+  return `<div class="check ${on ? 'on' : ''}" data-act="prepT" data-v="${p.id}" style="padding:10px 0"><span class="box">${on ? '✓' : ''}</span><img class="prod" src="${p.img}" alt=""><span class="ctext grow" style="text-decoration:none;opacity:1;color:var(--brun)">${esc(p.name)}${note ? `<br><span class="small" style="text-decoration:none;color:${mine ? 'var(--sauge-f)' : 'var(--or)'}">${note}</span>` : ''}</span></div>`;
+}
+function vPrep() {
+  const mine = prepMine(), ids = new Set(mine.map(p => p.id)), rest = C.produits.filter(p => !ids.has(p.id));
+  const av = bsdPhase() === 'avant';
+  return `${back('Ma journée', 'journee')}<h2>Préparer ma commande</h2>
+  <p class="muted small">Coche ce que tu veux commander pendant les Belles Sœurs Days. Ta liste reste enregistrée ici${av ? ', prête pour le 22 novembre' : ''}.</p>
+  <div class="card" style="border:1.5px solid var(--or);background:#FBF5E8"><span style="font-size:20px">🎁</span><p class="small" style="margin:6px 0 0">${av ? 'Rappel' : 'En ce moment'} : ton mois de Collagène Liquide est offert dès <b>${BSD_MIN} d'achat</b>${av ? ', à partir du 22 novembre' : ''}, dans la limite des stocks disponibles.</p></div>
+  ${mine.length ? `<p class="lab mt2">Mon rituel</p>${mine.map(prow).join('')}` : ''}
+  <p class="lab mt2">${mine.length ? 'Toute la gamme' : 'La gamme'}</p>${rest.map(prow).join('')}
+  <p class="lab mt2">Et aussi</p>
+  <a class="card tap row" href="${C.shop}" target="_blank" rel="noopener" style="padding:14px 16px;text-decoration:none"><div class="grow"><div class="serif" style="font-size:17px">Découvrir les soins Belles Sœurs</div><div class="small muted">Pour compléter ta commande</div></div><span class="muted">›</span></a>
+  <a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">Commander chez Clem</a>
+  <p class="fine mt">Le bouton de commande ouvre ta boutique. Les prix et l'offre sont ceux indiqués sur la boutique au moment de ta commande.</p>`;
+}
