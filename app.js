@@ -1015,7 +1015,9 @@ function cycleDay(d) { const st = rgList().filter(x => x <= d).pop(); return st 
 function cycleCard(d) {
   const c = cycleDay(d), l = rgList(), prev = l.filter(x => !c || x < c.st).pop();
   const lenPrev = c && prev ? diffDays(prev, c.st) : 0;
-  return `<div class="card"><span class="lab">Mon cycle · privé</span>
+  const on = L.showCycle !== false;
+  if (!on) return `<div class="card"><div class="row between"><span class="lab">Mon cycle · privé</span><button class="toggle" data-act="showCycle" aria-label="Afficher"></button></div><p class="fine" style="margin-bottom:0">Le suivi du cycle est masqué. Active-le quand tu veux.</p></div>`;
+  return `<div class="card"><div class="row between"><span class="lab">Mon cycle · privé</span><button class="toggle on" data-act="showCycle" aria-label="Masquer"></button></div>
   ${c ? `<div class="row" style="gap:12px;margin-top:10px;align-items:center"><span style="flex-shrink:0;width:58px;height:58px;border-radius:50%;background:#F3E6E1;color:#9A5B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:10px;letter-spacing:.08em">JOUR</span><span class="serif" style="font-size:24px">${c.n}</span></span>
     <div class="small">Jour ${c.n} de ton cycle<br><span class="muted">Règles commencées le ${dateCourte(c.st)}${lenPrev ? ` · cycle précédent : ${lenPrev} jours` : ''}</span></div></div>`
     : `<p class="small muted" style="margin:8px 0 0">Note le premier jour de tes règles pour savoir en un coup d'œil à quel jour de ton cycle tu en es.</p>`}
@@ -1202,6 +1204,7 @@ const ACT = {
   feel: v => { const [k, n] = v.split('|'), d = ui.jday || today(); const j = L.journal[d] = L.journal[d] || {}; j[k] = +n; save(); render(); },
   jdGo: v => { ui.jd = +v ? addDays(today(), +v) : null; ui.actForm = null; render(); window.scrollTo(0, 0); },
   jday: v => { const d = addDays(ui.jday || today(), +v); if (d > today()) return; ui.jday = d; render(); },
+  showCycle: () => { L.showCycle = L.showCycle === false; save(); render(); },
   showMes: () => { L.showMes = !L.showMes; save(); render(); },
   saveMes: () => {
     const m = { date: today() }; let any = false;
