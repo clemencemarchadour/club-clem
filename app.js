@@ -1031,7 +1031,7 @@ function notesCard() {
   const n = notesL();
   return `<div class="card"><div class="row between"><span class="lab">Mes notes · privé</span><button class="link small" data-act="noteNew">+ Nouvelle note</button></div>
   ${n.length ? n.map(x => `<div class="tap" data-act="noteOpen" data-v="${x.id}" style="padding:12px 0;border-bottom:1px solid var(--filet);cursor:pointer"><div class="row between"><b style="font-weight:500">${x.pin ? '📌 ' : ''}${esc(x.t || 'Sans titre')}</b><span class="small muted" style="flex-shrink:0;margin-left:8px">${dateCourte(iso(new Date(x.u)))}</span></div>${x.x ? `<div class="small muted" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.x.split('\n')[0])}</div>` : ''}</div>`).join('')
-    : `<p class="small muted" style="margin:8px 0 0">Un carnet rien qu'à toi : tes rendez-vous, les questions à poser à ton médecin, ce qui te fait du bien…</p>`}
+    : `<p class="small muted" style="margin:8px 0 0">Un carnet rien qu'à toi, pour y mettre tout ce que tu veux : tes rendez-vous, les questions à poser à ton médecin, tes idées de recettes, tes envies, tes petites victoires, ce qui te fait du bien…</p>`}
   </div>`;
 }
 function vNote() {
