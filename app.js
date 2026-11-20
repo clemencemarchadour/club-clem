@@ -66,7 +66,7 @@ async function pullRemote() {
 
 /* ---------- utilitaires UI ---------- */
 function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800); }
-function go(tab, sub = null, arg = null) { stopTimer(); if (tab !== 'journee') ui.jd = null; ui.tab = tab; ui.sub = sub; ui.arg = arg; render(); window.scrollTo(0, 0); }
+function go(tab, sub = null, arg = null) { if (ui.sub === 'note' && document.getElementById('nt')) noteKeep(); stopTimer(); if (tab !== 'journee') ui.jd = null; ui.tab = tab; ui.sub = sub; ui.arg = arg; render(); window.scrollTo(0, 0); }
 function sheet(html, onmount) {
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="in"><div class="wrapi">${html}</div></div>`;
@@ -990,6 +990,7 @@ const FEEL = [['e', 'Énergie', ['À plat', 'Fatiguée', 'Correcte', 'En forme',
 function vJournal() {
   if (!L.sucreV2) { Object.values(L.journal).forEach(j => { if (j && j.c) j.c = 6 - j.c; }); L.sucreV2 = 1; save(); }
   if (ui.sub === 'guide') return vGuide();
+  if (ui.sub === 'note') return vNote();
   const d = ui.jday || today(), j = L.journal[d] || {};
   return `${headBlock()}
   <div class="row between"><button class="heart" data-act="jday" data-v="-1">‹</button><span class="lab">${esc(longDate(d))}</span><button class="heart" data-act="jday" data-v="1" ${d === today() ? 'disabled style="opacity:.3"' : ''}>›</button></div>
@@ -998,6 +999,7 @@ function vJournal() {
   <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}</div>
   ${cycleCard(d)}
   <div class="card"><span class="lab">Ma note du jour</span><textarea id="jnote" class="mt" placeholder="Ce que j'ai remarqué aujourd'hui…">${esc(j.note || '')}</textarea></div>
+  ${notesCard()}
   <div class="card"><span class="lab">Mes 14 derniers jours</span>${chart()}</div>
   <div class="card"><div class="row between"><span class="lab">Mes mesures · privé</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
   ${L.showMes ? `<p class="fine">Tes mesures restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p>
@@ -1023,6 +1025,32 @@ function cycleCard(d) {
   <p class="fine">Ces dates restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
 }
 function rgAdd(x) { if (!x || x > today()) return; L.regles = [...new Set([...(L.regles || []), x])].sort(); save(); render(); }
+// Mes notes : carnet libre, uniquement sur le téléphone (L)
+const notesL = () => (L.notes || []).slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || b.u - a.u);
+function notesCard() {
+  const n = notesL();
+  return `<div class="card"><div class="row between"><span class="lab">Mes notes · privé</span><button class="link small" data-act="noteNew">+ Nouvelle note</button></div>
+  ${n.length ? n.map(x => `<div class="tap" data-act="noteOpen" data-v="${x.id}" style="padding:12px 0;border-bottom:1px solid var(--filet);cursor:pointer"><div class="row between"><b style="font-weight:500">${x.pin ? '📌 ' : ''}${esc(x.t || 'Sans titre')}</b><span class="small muted" style="flex-shrink:0;margin-left:8px">${dateCourte(iso(new Date(x.u)))}</span></div>${x.x ? `<div class="small muted" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.x.split('\n')[0])}</div>` : ''}</div>`).join('')
+    : `<p class="small muted" style="margin:8px 0 0">Un carnet rien qu'à toi : tes rendez-vous, les questions à poser à ton médecin, ce qui te fait du bien…</p>`}
+  </div>`;
+}
+function vNote() {
+  const x = (L.notes || []).find(n => n.id === ui.nid) || { t: '', x: '' };
+  return `${back('Mon journal', 'journal')}<h2>${x.id ? 'Ma note' : 'Nouvelle note'}</h2>
+  <div class="card"><input id="nt" placeholder="Titre" value="${esc(x.t)}" maxlength="80" style="width:100%;font-size:17px">
+  <textarea id="nx" class="mt" placeholder="Écris ce que tu veux…" style="min-height:260px">${esc(x.x)}</textarea>
+  <button class="btn full mt" data-act="noteSave">Enregistrer</button>
+  ${x.id ? `<div class="row between mt"><button class="link small" data-act="notePin">${x.pin ? 'Désépingler' : '📌 Épingler en haut'}</button><button class="link small" data-act="noteDel" style="color:#9A5B4B">Supprimer</button></div>` : ''}
+  <p class="fine mt">Tes notes restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
+}
+function noteKeep() {
+  const t = ($('#nt') || {}).value || '', x = ($('#nx') || {}).value || '';
+  if (!t.trim() && !x.trim()) return null;
+  L.notes = L.notes || [];
+  let n = L.notes.find(n => n.id === ui.nid);
+  if (!n) { n = { id: 'n' + Date.now().toString(36), pin: 0 }; L.notes.push(n); ui.nid = n.id; }
+  n.t = t.trim(); n.x = x; n.u = Date.now(); save(); return n;
+}
 function chart() {
   const days = Array.from({ length: 14 }, (_, i) => addDays(today(), i - 13));
   const W = 300, H = 54, x = i => 8 + i * (W - 16) / 13, y = v => H - 8 - (v - 1) * (H - 16) / 4;
@@ -1069,6 +1097,11 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  noteNew: () => { ui.nid = null; go('journal', 'note'); },
+  noteOpen: v => { ui.nid = v; go('journal', 'note'); },
+  noteSave: () => { noteKeep(); ui.nid = null; go('journal'); },
+  notePin: () => { const n = noteKeep() || (L.notes || []).find(n => n.id === ui.nid); if (n) { n.pin = n.pin ? 0 : 1; save(); } render(); },
+  noteDel: () => { if (!confirm('Supprimer cette note ?')) return; L.notes = (L.notes || []).filter(n => n.id !== ui.nid); save(); ui.nid = null; go('journal'); },
   rgSave: () => { const i = $('#rgIn'); if (i) rgAdd(i.value); },
   rgDel: v => { L.regles = (L.regles || []).filter(x => x !== v); save(); render(); },
   prepT: v => { S.prep = S.prep || {}; S.prep[v] = !prepOn(v); save(); render(); },
