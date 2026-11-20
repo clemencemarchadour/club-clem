@@ -996,6 +996,7 @@ function vJournal() {
   <div class="card"><span class="lab">Mon ressenti</span>
   ${FEEL.map(([k, l, w]) => `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row between"><span>${l}</span><div class="dots">${[1, 2, 3, 4, 5].map(n => `<button class="${(j[k] || 0) >= n ? 'on' : ''}" data-act="feel" data-v="${k}|${n}" aria-label="${esc(w[n - 1])}"></button>`).join('')}</div></div>
   <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}</div>
+  ${cycleCard(d)}
   <div class="card"><span class="lab">Ma note du jour</span><textarea id="jnote" class="mt" placeholder="Ce que j'ai remarqué aujourd'hui…">${esc(j.note || '')}</textarea></div>
   <div class="card"><span class="lab">Mes 14 derniers jours</span>${chart()}</div>
   <div class="card"><div class="row between"><span class="lab">Mes mesures · privé</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
@@ -1006,6 +1007,22 @@ function vJournal() {
     ${L.mesures.length ? `<ul class="clean mt">${L.mesures.slice().reverse().slice(0, 8).map(m => `<li class="small"><b>${parse(m.date).getDate()} ${MOIS[parse(m.date).getMonth()]}</b> · ${['poids', 'taille', 'hanches', 'cuisse'].filter(k => m[k]).map(k => m[k] + (k === 'poids' ? ' kg' : ' cm') + ' ' + ({ poids: '', taille: 'taille', hanches: 'hanches', cuisse: 'cuisse' }[k])).join(' · ')}</li>`).join('')}</ul>` : ''}`
       : '<p class="fine">Tes mesures sont masquées.</p>'}</div>`;
 }
+// Cycle : uniquement sur le téléphone (L), aucune prédiction, juste le jour du cycle
+const rgList = () => (L.regles || []).slice().sort();
+function cycleDay(d) { const st = rgList().filter(x => x <= d).pop(); return st ? { st, n: diffDays(st, d) + 1 } : null; }
+function cycleCard(d) {
+  const c = cycleDay(d), l = rgList(), prev = l.filter(x => !c || x < c.st).pop();
+  const lenPrev = c && prev ? diffDays(prev, c.st) : 0;
+  return `<div class="card"><span class="lab">Mon cycle · privé</span>
+  ${c ? `<div class="row" style="gap:12px;margin-top:10px;align-items:center"><span style="flex-shrink:0;width:58px;height:58px;border-radius:50%;background:#F3E6E1;color:#9A5B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:10px;letter-spacing:.08em">JOUR</span><span class="serif" style="font-size:24px">${c.n}</span></span>
+    <div class="small">Jour ${c.n} de ton cycle<br><span class="muted">Règles commencées le ${dateCourte(c.st)}${lenPrev ? ` · cycle précédent : ${lenPrev} jours` : ''}</span></div></div>`
+    : `<p class="small muted" style="margin:8px 0 0">Note le premier jour de tes règles pour savoir en un coup d'œil à quel jour de ton cycle tu en es.</p>`}
+  ${c && c.n === 1 ? '' : `<button class="btn soft full mt" data-act="rgAdd" data-v="${d}">Mes règles ont commencé ${d === today() ? "aujourd'hui" : 'ce jour-là'}</button>`}
+  <div class="row between mt" style="gap:8px"><span class="small muted">Elles ont commencé un autre jour ?</span><input type="date" data-rg="1" max="${today()}" style="width:auto"></div>
+  ${l.length ? `<details class="mt"><summary class="small muted">Mes dates (${l.length})</summary><ul class="clean">${l.slice().reverse().slice(0, 12).map(x => `<li class="row between small"><span>${dateCourte(x)} ${parse(x).getFullYear()}</span><button class="link small" data-act="rgDel" data-v="${x}">Retirer</button></li>`).join('')}</ul></details>` : ''}
+  <p class="fine">Ces dates restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
+}
+function rgAdd(x) { if (!x || x > today()) return; L.regles = [...new Set([...(L.regles || []), x])].sort(); save(); render(); }
 function chart() {
   const days = Array.from({ length: 14 }, (_, i) => addDays(today(), i - 13));
   const W = 300, H = 54, x = i => 8 + i * (W - 16) / 13, y = v => H - 8 - (v - 1) * (H - 16) / 4;
@@ -1052,6 +1069,8 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  rgAdd: v => rgAdd(v),
+  rgDel: v => { L.regles = (L.regles || []).filter(x => x !== v); save(); render(); },
   prepT: v => { S.prep = S.prep || {}; S.prep[v] = !prepOn(v); save(); render(); },
   nameEd: () => { ui.nameEd = true; render(); setTimeout(() => { const n = $('#pn'); if (n) { n.focus(); n.select(); } }, 50); },
   nameOk: () => { const n = $('#pn'), v = n ? n.value.trim().replace(/\s+/g, ' ').slice(0, 30) : ''; if (v) { S.prenom = v.charAt(0).toUpperCase() + v.slice(1); save(); try { sb.from('members').update({ prenom: S.prenom }).eq('email', (USER.email || '').toLowerCase()).then(() => {}, () => {}); } catch (e) {} } ui.nameEd = false; render(); },
@@ -1178,6 +1197,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } if (k === 'g' && r.f && r.g && +e.target.dataset.row === ui.draft.rows.length - 1) { keepDraft(); ui.draft.rows.push({ f: '', g: '', u: '' }); render(); const n = ui.draft.rows.length - 1; setTimeout(() => { const el = document.querySelector(`[data-row="${n}"][data-k="f"]`); if (el) el.focus(); }, 30); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
+  if (e.target.dataset && e.target.dataset.rg) { rgAdd(e.target.value); return; }
   if (e.target.dataset && e.target.dataset.std && ui.stocks && ui.stocks[e.target.dataset.std]) { ui.stocks[e.target.dataset.std].d = e.target.value; return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
