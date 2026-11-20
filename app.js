@@ -288,7 +288,7 @@ function showBsd(ph, after) {
   const av = ph === 'avant', p = prenom();
   const o = document.createElement('div'); o.className = 'bmodal';
   o.innerHTML = `<div class="bbox" style="padding:0;overflow:hidden"><img src="img/ban/v4.jpg" alt="" style="width:100%;height:170px;object-fit:cover;object-position:50% 56%;display:block">
-  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or)">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : "Belles Sœurs Days · C'est parti"}</span>
+  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : "Belles Sœurs Days · C'est parti"}</span>
   <h2 class="serif" style="font-size:27px;line-height:1.15;margin:12px 0 0">${av ? `${p ? esc(p) + ', ton' : 'Ton'} mois de Collagène Liquide offert` : `${p ? esc(p) + ', c' : 'C'}'est le moment !`}</h2>
   <p class="muted" style="margin:12px 0 0;line-height:1.5">${av ? `Parce que tu fais partie du Club, tu es la première au courant, avant tout le monde : pendant les Belles Sœurs Days, à partir du 22 novembre, ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.` : `Les Belles Sœurs Days ont commencé : ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.`}</p>
   ${av ? `<button class="btn full" style="margin-top:20px" id="bgo">Découvrir mon cadeau</button>` : `<a class="btn full" style="margin-top:20px" id="bgo" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
@@ -1233,7 +1233,7 @@ function bsdBanner(ph) {
   const sub = encodeURIComponent('Club Clem · Conseil Belles Sœurs Days');
   return `<div class="card center" style="border:1.5px solid var(--or);padding:0;overflow:hidden">
   <img src="img/ban/v4.jpg" style="width:100%;height:190px;object-fit:cover;object-position:50% 56%;display:block" alt="">
-  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or)">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : 'Belles Sœurs Days · En ce moment'}</span>
+  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : 'Belles Sœurs Days · En ce moment'}</span>
   <div class="serif" style="font-size:24px;line-height:1.15;margin-top:8px">Ton mois de Collagène Liquide offert</div>${av ? `<p class="small" style="margin:6px 0 0;color:var(--brun)">En avant-première, rien que pour les membres du Club : personne d'autre n'est encore au courant.</p>` : ''}
   <p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? 'À partir du 22 novembre, dans' : 'Dans'} la limite des stocks disponibles.</p>
   ${av ? `<button class="btn full mt" data-go="rituel|fiche|collagene">Découvrir mon cadeau</button>` : `<a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
