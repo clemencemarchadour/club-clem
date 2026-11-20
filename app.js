@@ -1253,8 +1253,8 @@ function prepCard() {
 }
 function bsdFiche(ph) {
   const t = ph === 'avant'
-    ? `<b>Belles Sœurs Days, dès le 22 novembre</b><br>Ton mois de Collagène Liquide offert dès ${BSD_MIN} d'achat. Tu prends ton rituel de 3 mois ? Attends le 22 : à 199 € au lieu de 237 €, ton 4e mois sera offert. Soit 4 mois pour 199 €, d'une valeur de 316 €. Dans la limite des stocks disponibles.`
-    : `<b>C'est le moment</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat. Ton rituel de 3 mois est à 199 € au lieu de 237 €, et ton 4e mois est offert : 4 mois pour 199 €, d'une valeur de 316 €. Dans la limite des stocks disponibles.`;
+    ? `<b>Belles Sœurs Days, dès le 22 novembre</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, quels que soient les produits de ton panier : compléments, soins, tout compte.<br><br><span class="small">Par exemple, si tu prends ton rituel de 3 mois de Collagène, ton 4e mois est offert : 4 mois pour le prix de 3.</span><br><br>Dans la limite des stocks disponibles.`
+    : `<b>C'est le moment</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, quels que soient les produits de ton panier : compléments, soins, tout compte.<br><br><span class="small">Par exemple, si tu prends ton rituel de 3 mois de Collagène, ton 4e mois est offert : 4 mois pour le prix de 3.</span><br><br>Dans la limite des stocks disponibles.`;
   return `<div class="card" style="border:1.5px solid var(--or);background:#FBF5E8;margin-top:16px"><span style="font-size:20px">🎁</span><p style="margin:6px 0 0;line-height:1.45">${t}</p></div>`;
 }
 function prow(p) {
