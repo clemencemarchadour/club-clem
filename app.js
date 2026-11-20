@@ -1017,8 +1017,8 @@ function cycleCard(d) {
   ${c ? `<div class="row" style="gap:12px;margin-top:10px;align-items:center"><span style="flex-shrink:0;width:58px;height:58px;border-radius:50%;background:#F3E6E1;color:#9A5B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:10px;letter-spacing:.08em">JOUR</span><span class="serif" style="font-size:24px">${c.n}</span></span>
     <div class="small">Jour ${c.n} de ton cycle<br><span class="muted">Règles commencées le ${dateCourte(c.st)}${lenPrev ? ` · cycle précédent : ${lenPrev} jours` : ''}</span></div></div>`
     : `<p class="small muted" style="margin:8px 0 0">Note le premier jour de tes règles pour savoir en un coup d'œil à quel jour de ton cycle tu en es.</p>`}
-  ${c && c.n === 1 ? '' : `<button class="btn soft full mt" data-act="rgAdd" data-v="${d}">Mes règles ont commencé ${d === today() ? "aujourd'hui" : 'ce jour-là'}</button>`}
-  <div class="row between mt" style="gap:8px"><span class="small muted">Elles ont commencé un autre jour ?</span><input type="date" data-rg="1" max="${today()}" style="width:auto"></div>
+  <p class="small" style="margin:14px 0 6px">Premier jour de mes règles</p>
+  <div class="row" style="gap:8px"><input type="date" id="rgIn" value="${d}" max="${today()}" style="flex:1;min-width:0"><button class="btn" data-act="rgSave" style="flex-shrink:0;padding-left:18px;padding-right:18px">OK</button></div>
   ${l.length ? `<details class="mt"><summary class="small muted">Mes dates (${l.length})</summary><ul class="clean">${l.slice().reverse().slice(0, 12).map(x => `<li class="row between small"><span>${dateCourte(x)} ${parse(x).getFullYear()}</span><button class="link small" data-act="rgDel" data-v="${x}">Retirer</button></li>`).join('')}</ul></details>` : ''}
   <p class="fine">Ces dates restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
 }
@@ -1069,7 +1069,7 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
-  rgAdd: v => rgAdd(v),
+  rgSave: () => { const i = $('#rgIn'); if (i) rgAdd(i.value); },
   rgDel: v => { L.regles = (L.regles || []).filter(x => x !== v); save(); render(); },
   prepT: v => { S.prep = S.prep || {}; S.prep[v] = !prepOn(v); save(); render(); },
   nameEd: () => { ui.nameEd = true; render(); setTimeout(() => { const n = $('#pn'); if (n) { n.focus(); n.select(); } }, 50); },
@@ -1197,7 +1197,6 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('change', e => {
   if (e.target.id === 'o_img' && e.target.files[0]) { keepDraft(); shrink(e.target.files[0], 900, false, u => { ui.draft.img = u; render(); }); return; }
   if (e.target.dataset && e.target.dataset.row !== undefined) { const r = ui.draft.rows[+e.target.dataset.row], k = e.target.dataset.k; r[k] = e.target.value; if (k === 'f') { r.u = ''; resolveRow(r); keepDraft(); render(); return; } if (k === 'g' && r.f && r.g && +e.target.dataset.row === ui.draft.rows.length - 1) { keepDraft(); ui.draft.rows.push({ f: '', g: '', u: '' }); render(); const n = ui.draft.rows.length - 1; setTimeout(() => { const el = document.querySelector(`[data-row="${n}"][data-k="f"]`); if (el) el.focus(); }, 30); return; } const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
-  if (e.target.dataset && e.target.dataset.rg) { rgAdd(e.target.value); return; }
   if (e.target.dataset && e.target.dataset.std && ui.stocks && ui.stocks[e.target.dataset.std]) { ui.stocks[e.target.dataset.std].d = e.target.value; return; }
   if (e.target.id === 'o_pers' && ui.draft) { ui.draft.pers = e.target.value; const tb = document.getElementById('o_tot'); if (tb) tb.innerHTML = totBlock(); return; }
   if (e.target.id !== 'photo' || !e.target.files[0]) return;
