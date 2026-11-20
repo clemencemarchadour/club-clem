@@ -891,7 +891,6 @@ function essCard(t) {
   const xs = essList(), f = ui.essForm;
   return `<div class="card"><span class="lab">Mes essentiels</span>
   <p class="small" style="margin:6px 0 4px;color:var(--txt2)">Ce que tu prends en plus de ton rituel Belles Sœurs : vitamines, magnésium, oméga 3, pilule, traitement… Ajoute-les ici pour avoir toute ta checklist du jour au même endroit.</p>
-  <p class="small" style="margin:0 0 4px;color:var(--sauge-f)">🔒 Ces infos sont confidentielles : elles restent uniquement sur ton téléphone et personne d'autre n'y a accès, même pas Clem.</p>
   ${xs.map(e => `<div class="row" style="gap:6px">${essLine(t, e).replace('class="check', 'style="flex:1" class="check')}<button class="heart" data-act="essRm" data-v="${e.id}" aria-label="Retirer">×</button></div>`).join('')}
   ${f ? `<div class="field mt"><input id="ess_n" placeholder="Ex. : magnésium, pilule…" value="${esc(f.n || '')}" autocomplete="off"></div>
   <p class="lab mt">Quand ?</p><div class="chips" style="flex-wrap:wrap;overflow:visible">${ESS_M.map(([k, l]) => `<button class="chip ${f.m === k ? 'on' : ''}" data-act="essM" data-v="${k}">${l}</button>`).join('')}</div>
@@ -1001,9 +1000,8 @@ function vJournal() {
   ${cycleCard(d)}
   <div class="card"><span class="lab">Mes 14 derniers jours</span>${chart()}</div>
   ${notesCard()}
-  <div class="card"><div class="row between"><span class="lab">Mes mesures · privé</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
-  ${L.showMes ? `<p class="fine">Tes mesures restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p>
-    <div class="grid2 mt">${[['poids', 'Poids', 'kg'], ['taille', 'Tour de taille', 'cm'], ['hanches', 'Tour de hanches', 'cm'], ['cuisse', 'Tour de cuisse', 'cm']].map(([k, l, u]) => `<div class="field"><label>${l}</label><div class="unit"><input id="m_${k}" inputmode="decimal" placeholder="..."><span>${u}</span></div></div>`).join('')}</div>
+  <div class="card"><div class="row between"><span class="lab">Mes mesures</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
+  ${L.showMes ? `    <div class="grid2 mt">${[['poids', 'Poids', 'kg'], ['taille', 'Tour de taille', 'cm'], ['hanches', 'Tour de hanches', 'cm'], ['cuisse', 'Tour de cuisse', 'cm']].map(([k, l, u]) => `<div class="field"><label>${l}</label><div class="unit"><input id="m_${k}" inputmode="decimal" placeholder="..."><span>${u}</span></div></div>`).join('')}</div>
     <button class="btn full mt" data-act="saveMes">Enregistrer</button>
     <p class="center mt"><button class="link" data-go="journal|guide|">Comment prendre mes mensurations ?</button></p>
     ${L.mesures.length ? `<ul class="clean mt">${L.mesures.slice().reverse().slice(0, 8).map(m => `<li class="small"><b>${parse(m.date).getDate()} ${MOIS[parse(m.date).getMonth()]}</b> · ${['poids', 'taille', 'hanches', 'cuisse'].filter(k => m[k]).map(k => m[k] + (k === 'poids' ? ' kg' : ' cm') + ' ' + ({ poids: '', taille: 'taille', hanches: 'hanches', cuisse: 'cuisse' }[k])).join(' · ')}</li>`).join('')}</ul>` : ''}`
@@ -1016,22 +1014,22 @@ function cycleCard(d) {
   const c = cycleDay(d), l = rgList(), prev = l.filter(x => !c || x < c.st).pop();
   const lenPrev = c && prev ? diffDays(prev, c.st) : 0;
   const on = L.showCycle !== false;
-  if (!on) return `<div class="card"><div class="row between"><span class="lab">Mon cycle · privé</span><button class="toggle" data-act="showCycle" aria-label="Afficher"></button></div><p class="fine" style="margin-bottom:0">Le suivi du cycle est masqué. Active-le quand tu veux.</p></div>`;
-  return `<div class="card"><div class="row between"><span class="lab">Mon cycle · privé</span><button class="toggle on" data-act="showCycle" aria-label="Masquer"></button></div>
+  if (!on) return `<div class="card"><div class="row between"><span class="lab">Mon cycle</span><button class="toggle" data-act="showCycle" aria-label="Afficher"></button></div><p class="fine" style="margin-bottom:0">Le suivi du cycle est masqué. Active-le quand tu veux.</p></div>`;
+  return `<div class="card"><div class="row between"><span class="lab">Mon cycle</span><button class="toggle on" data-act="showCycle" aria-label="Masquer"></button></div>
   ${c ? `<div class="row" style="gap:12px;margin-top:10px;align-items:center"><span style="flex-shrink:0;width:58px;height:58px;border-radius:50%;background:#F3E6E1;color:#9A5B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:10px;letter-spacing:.08em">JOUR</span><span class="serif" style="font-size:24px">${c.n}</span></span>
     <div class="small">Jour ${c.n} de ton cycle<br><span class="muted">Règles commencées le ${dateCourte(c.st)}${lenPrev ? ` · cycle précédent : ${lenPrev} jours` : ''}</span></div></div>`
     : `<p class="small muted" style="margin:8px 0 0">Note le premier jour de tes règles pour savoir en un coup d'œil à quel jour de ton cycle tu en es.</p>`}
   <p class="small" style="margin:14px 0 6px">Premier jour de mes règles</p>
   <div class="row" style="gap:8px"><input type="date" id="rgIn" value="${d}" max="${today()}" style="flex:1;min-width:0"><button class="btn" data-act="rgSave" style="flex-shrink:0;padding-left:18px;padding-right:18px">OK</button></div>
   ${l.length ? `<details class="mt"><summary class="small muted">Mes dates (${l.length})</summary><ul class="clean">${l.slice().reverse().slice(0, 12).map(x => `<li class="row between small"><span>${dateCourte(x)} ${parse(x).getFullYear()}</span><button class="link small" data-act="rgDel" data-v="${x}">Retirer</button></li>`).join('')}</ul></details>` : ''}
-  <p class="fine">Ces dates restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
+  </div>`;
 }
 function rgAdd(x) { if (!x || x > today()) return; L.regles = [...new Set([...(L.regles || []), x])].sort(); save(); render(); }
 // Mes notes : carnet libre, uniquement sur le téléphone (L)
 const notesL = () => (L.notes || []).slice().sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || b.u - a.u);
 function notesCard() {
   const n = notesL();
-  return `<div class="card"><div class="row between"><span class="lab">Mes notes · privé</span><button class="link small" data-act="noteNew">+ Nouvelle note</button></div>
+  return `<div class="card"><div class="row between"><span class="lab">Mes notes</span><button class="link small" data-act="noteNew">+ Nouvelle note</button></div>
   ${n.length ? n.map(x => `<div class="tap" data-act="noteOpen" data-v="${x.id}" style="padding:12px 0;border-bottom:1px solid var(--filet);cursor:pointer"><div class="row between"><b style="font-weight:500">${x.pin ? '📌 ' : ''}${esc(x.t || 'Sans titre')}</b><span class="small muted" style="flex-shrink:0;margin-left:8px">${dateCourte(iso(new Date(x.u)))}</span></div>${x.x ? `<div class="small muted" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.x.split('\n')[0])}</div>` : ''}</div>`).join('')
     : `<p class="small muted" style="margin:8px 0 0">Un carnet rien qu'à toi, pour y mettre tout ce que tu veux : tes rendez-vous, les questions à poser à ton médecin, tes idées de recettes, tes envies, tes petites victoires, ce qui te fait du bien…</p>`}
   </div>`;
@@ -1043,7 +1041,7 @@ function vNote() {
   <textarea id="nx" class="mt" placeholder="Écris ce que tu veux…" style="min-height:260px">${esc(x.x)}</textarea>
   <button class="btn full mt" data-act="noteSave">Enregistrer</button>
   ${x.id ? `<div class="row between mt"><button class="link small" data-act="notePin">${x.pin ? 'Désépingler' : '📌 Épingler en haut'}</button><button class="link small" data-act="noteDel" style="color:#9A5B4B">Supprimer</button></div>` : ''}
-  <p class="fine mt">Tes notes restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p></div>`;
+  </div>`;
 }
 function noteKeep() {
   const t = ($('#nt') || {}).value || '', x = ($('#nx') || {}).value || '';
@@ -1093,7 +1091,7 @@ function vProfil() {
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
   <a class="card tap row" href="mailto:clemence@belles-soeurs.com?subject=${encodeURIComponent('Le Club Clem')}" style="text-decoration:none"><div class="grow"><span class="lab">Une question, une idée ?</span><div>Contacter Clem</div><div class="small muted">clemence@belles-soeurs.com</div></div><span>✉️</span></a>
   ${installHint()}
-  <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Ton journal et tes mesures restent sur ton téléphone. Tes favoris, ta semaine et ton rituel sont sauvegardés de façon privée sur ton compte.</p></div>
+  <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Tes essentiels et tout ce que tu notes dans Mon journal (ressenti, cycle, notes, mesures) restent uniquement sur ton téléphone. Ton rituel, tes repas, tes séances et tes favoris sont sauvegardés sur ton compte sécurisé, pour que tu les retrouves si tu changes de téléphone. Rien n'est jamais partagé, vendu ou utilisé à des fins publicitaires.</p></div>
   <button class="btn ghost full mt" data-act="logout">Me déconnecter</button>`;
 }
 
