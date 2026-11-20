@@ -996,11 +996,11 @@ function vJournal() {
   <div class="row between"><button class="heart" data-act="jday" data-v="-1">‹</button><span class="lab">${esc(longDate(d))}</span><button class="heart" data-act="jday" data-v="1" ${d === today() ? 'disabled style="opacity:.3"' : ''}>›</button></div>
   <div class="card"><span class="lab">Mon ressenti</span>
   ${FEEL.map(([k, l, w]) => `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row between"><span>${l}</span><div class="dots">${[1, 2, 3, 4, 5].map(n => `<button class="${(j[k] || 0) >= n ? 'on' : ''}" data-act="feel" data-v="${k}|${n}" aria-label="${esc(w[n - 1])}"></button>`).join('')}</div></div>
-  <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}</div>
+  <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}
+  ${j.note || ui.jnOpen === d ? `<div style="padding-top:12px"><span class="small muted">Un mot sur ta journée</span><textarea id="jnote" placeholder="Ce que j'ai remarqué aujourd'hui…" style="margin-top:6px;min-height:46px;height:auto" rows="2">${esc(j.note || '')}</textarea></div>` : `<button class="link small" data-act="jnOpen" style="margin-top:12px">+ Un mot sur ta journée ? (facultatif)</button>`}</div>
   ${cycleCard(d)}
-  <div class="card"><span class="lab">Ma note du jour</span><textarea id="jnote" class="mt" placeholder="Ce que j'ai remarqué aujourd'hui…">${esc(j.note || '')}</textarea></div>
-  ${notesCard()}
   <div class="card"><span class="lab">Mes 14 derniers jours</span>${chart()}</div>
+  ${notesCard()}
   <div class="card"><div class="row between"><span class="lab">Mes mesures · privé</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
   ${L.showMes ? `<p class="fine">Tes mesures restent uniquement sur ton téléphone. Personne d'autre n'y a accès, même pas Clem.</p>
     <div class="grid2 mt">${[['poids', 'Poids', 'kg'], ['taille', 'Tour de taille', 'cm'], ['hanches', 'Tour de hanches', 'cm'], ['cuisse', 'Tour de cuisse', 'cm']].map(([k, l, u]) => `<div class="field"><label>${l}</label><div class="unit"><input id="m_${k}" inputmode="decimal" placeholder="..."><span>${u}</span></div></div>`).join('')}</div>
@@ -1097,6 +1097,7 @@ function vProfil() {
 
 /* ---------- actions ---------- */
 const ACT = {
+  jnOpen: () => { ui.jnOpen = ui.jday || today(); render(); setTimeout(() => { const t = $('#jnote'); if (t) t.focus(); }, 50); },
   noteNew: () => { ui.nid = null; go('journal', 'note'); },
   noteOpen: v => { ui.nid = v; go('journal', 'note'); },
   noteSave: () => { noteKeep(); ui.nid = null; go('journal'); },
