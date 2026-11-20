@@ -384,13 +384,18 @@ function waterCard(t) {
   <div class="row between small muted" style="margin-top:6px"><span>1 verre = 25 cl</span><span>${tot >= goal * cl ? '2 L, bravo 🤎' : tot >= min ? '1,5 L atteint, bravo !' : 'Minimum : 1,5 L'}</span></div></div>`;
 }
 const eatOf = (day, k) => ((S.eat || {})[day] || {})[k] || [];
-const fGrams = e => { const f = foodOf(e.f); const q = +e.q || 0; return f && e.u === 'u' && f[5] ? q * f[5] : q; };
+// Unités : 'u' = unité de l'aliment, 'u2' = c. à café (pour les aliments dosés en c. à soupe), 'g' = grammes
+const U2 = f => f && f[5] && f[6] === 'c. à soupe' ? ['c. à café', Math.round(f[5] / 3 * 2) / 2] : null;
+const uG = (f, u) => !f ? 0 : u === 'u' ? f[5] || 0 : u === 'u2' ? (U2(f) || [0, 0])[1] : 0;
+const uN = (f, u) => u === 'u2' ? 'c. à café' : f[6];
+const uOpts = (f, cur, grams) => (f && f[5] ? `<option value="u"${cur === 'u' ? ' selected' : ''}>${esc(f[6])}${grams ? ` (${f[5]} g)` : ''}</option>` : '') + (U2(f) ? `<option value="u2"${cur === 'u2' ? ' selected' : ''}>c. à café${grams ? ` (${String(U2(f)[1]).replace('.', ',')} g)` : ''}</option>` : '') + `<option value="g"${cur === 'g' ? ' selected' : ''}>grammes</option>`;
+const fGrams = e => { const f = foodOf(e.f); const q = +e.q || 0; const k = uG(f, e.u); return k ? q * k : q; };
 const OUT_W = [['resto', 'Resto'], ['amis', 'Chez des amis ou en famille'], ['emporter', 'À emporter']], OUT_S = [['leger', 'Léger', 500, 'une salade composée, un poisson et des légumes…'], ['normal', 'Normal', 800, 'un plat et un dessert, ou une entrée et un plat'], ['copieux', 'Copieux', 1100, 'entrée, plat, dessert, un verre de vin…']];
 const fVals = e => { if (e.out) { const o = OUT_S.find(x => x[0] === e.out.s); return { kcal: o ? o[2] : 0, p: 0, g: 0, l: 0 }; }
   return fVals0(e); };
 const fVals0 = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
-const plu = (u, q) => { if (!u || +q <= 1) return u; const w = u.split(' '); if (/[sx]$/.test(w[0])) return u; w[0] = w[0] + (/(eau|eu)$/.test(w[0]) ? 'x' : 's'); return w.join(' '); };
-const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return e.u === 'u' && f && f[5] ? `${q} ${plu(f[6], e.q)}` : `${q} g`; };
+const plu = (u, q) => { if (!u || +q <= 1) return u; const w = u.split(' '); if (/[sx.]$/.test(w[0])) return u; w[0] = w[0] + (/(eau|eu)$/.test(w[0]) ? 'x' : 's'); return w.join(' '); };
+const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return uG(f, e.u) ? `${q} ${plu(uN(f, e.u), e.q)}` : `${q} g`; };
 function dayTotal(day) {
   const plan = S.plan[day] || {}, tot = { kcal: 0, p: 0, g: 0, l: 0 };
   SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
@@ -529,7 +534,7 @@ function vAjout() {
     return `<div style="padding:10px 0;border-bottom:1px solid var(--filet)"><div class="row" style="gap:8px"><input enterkeyhint="next" data-row="${i}" data-k="f" placeholder="Tape un aliment : œuf, riz, pomme…" value="${esc(r.f)}" autocomplete="off" autocorrect="off" style="flex:1"><button class="heart" data-act="rmRow" data-v="${i}">×</button></div>
     <div id="sug_${i}"></div>
     <div class="row" style="gap:8px;margin-top:8px"><input inputmode="decimal" enterkeyhint="next" data-row="${i}" data-k="g" placeholder="Quantité" value="${esc(r.g)}" style="flex:1">
-    <select data-row="${i}" data-k="u" style="flex:1">${hasU ? `<option value="u"${r.u === 'u' ? ' selected' : ''}>${esc(f[6])} (${f[5]} g)</option>` : ''}<option value="g"${r.u === 'g' ? ' selected' : ''}>grammes</option></select></div></div>`; }).join('')}
+    <select data-row="${i}" data-k="u" style="flex:1">${uOpts(hasU ? f : null, r.u, true)}</select></div></div>`; }).join('')}
   <button class="link" data-act="addRow">+ Ajouter un ingrédient</button>
   <div id="o_tot">${totBlock()}</div></div>
   <div class="field mt"><label>Préparation (facultatif, une étape par ligne)</label><textarea id="o_steps">${esc(d.steps || '')}</textarea></div>
@@ -561,7 +566,7 @@ const UNITW = [[/^(kg|kilos?)$/, 1000], [/^(g|gr|grs|grammes?)$/, 1], [/^(ml)$/,
 function parseMeal(txt) {
   const segs = String(txt || '').replace(/\d+([.,]\d+)?\s*%/g, ' ').replace(/omelettes?\s+(?:de\s+|à\s+|a\s+)?(\d+)\s+(oeufs?|œufs?)/gi, '$1 œufs').replace(/\bpetits?\s+pains?\b(?!\s+(au|aux)\b)/gi, 'pain individuel').replace(/\bpot[\s-]+au[\s-]+feu\b/gi, 'potaufeu').replace(/(\S)\s+frites\b/gi, '$1, frites').replace(/\bc\.?\s*[àa]\.?\s*s\b\.?/gi, 'c à soupe').replace(/\bc\.?\s*[àa]\.?\s*c\b\.?/gi, 'c à café').replace(/\bc\.\s*s\b\.?/gi, 'c à soupe').replace(/\bc\.\s*c\b\.?/gi, 'c à café').replace(/\b(?:cakes?\b[^,.;]*?\bpicard|picard\b[^,.;]*?\bcakes?)\b(?:\s+(?:au\s+)?poulet)?/gi, 'picardcake').replace(/\bcakes?\s+(?:sal[ée]s?|(?:aux?|à la|a la)\s+(?:olives?|jambon|lardons|l[ée]gumes|thon|ch[èe]vre|courgettes?|feta|tomates?))\b/gi, 'cakesale').replace(/\bchocolats?\s+chauds?\b/gi, 'chocolatchaud').replace(/\bnoix\s+(?:de\s+)?muscade\b/gi, 'muscade').replace(/\bair\s*fryer\b/gi, ' ').replace(/\bblancs?\s+(?:de\s+|d')?poireaux?\b/gi, 'blancpoireau').replace(/(?:\b(?:une|la|de la|ma)\s+)?(?:petite\s+|bonne\s+)?\bsauces?\s+(?:au|à la|a la|aux|de)\s+(fromage blanc|yaourt grec|yaourt|skyr)\b/gi, ', 60 g $1').split(/[;\n+]|,(?!\d)|(?<!\d),|(?<!(?:^|[\s.])[a-zA-Z])\.(?!\d)|\bet\b|\bavec\b|\bpuis\b|\bplus\b/i).map(x => x.trim()).filter(Boolean);
   return segs.map(x => /^(?:(?:une?|\d+)\s+)?salades?\s+(de\s+|d')\S+\s+\S/i.test(x) ? x.replace(/^(?:(?:une?|\d+)\s+)?salades?\s+(de\s+|d')/i, '') : x).flatMap(raw => {
-    let size = 1, uname = '', unitWord = false, w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2').replace(/(\d)[.,](\d)/g, '$1dec$2')).replace(/(\d)dec(\d)/g, '$1.$2').replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
+    let size = 1, uname = '', unitWord = false, spoon = '', w = norm(String(raw).replace(/(\d)\s*\/\s*(\d)/g, '$1frac$2').replace(/(\d)[.,](\d)/g, '$1dec$2')).replace(/(\d)dec(\d)/g, '$1.$2').replace(/(\d)(?!frac)([a-z])/g, '$1 $2').split(' ').filter(Boolean), q = null, mult = null;
     const out = [];
     for (let i = 0; i < w.length; i++) {
       const x = w[i];
@@ -577,7 +582,7 @@ function parseMeal(txt) {
       if (/^(morceaux?|portions?|parts?|tartines?|boules?|carres?|coupes?|parts?)$/.test(x) && out.length === 0 && !mult) { unitWord = true; uname = sing(x); mult = /^coupe/.test(x) ? 100 : 30; continue; }
       if (/^noisettes?$/.test(x) && out.length === 0 && !mult && /beurre/.test(w.slice(i + 1).join(' '))) { mult = 10; continue; }
       if (/^bols?$/.test(x) && out.length === 0 && !mult && /cereale|muesli|granola|flocon/.test(w.slice(i + 1).join(' '))) { mult = 40; continue; }
-      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult && (!/^(soupe|cafe)$/.test(x) || /^(a|c|cuilleres?)$/.test(w[i - 1] || ''))) { mult = /^verres?$/.test(x) && /vin|champagne|biere/.test(w.slice(i + 1).join(' ')) ? (/biere/.test(w.join(' ')) ? 250 : 125) : u[1]; unitWord = /^(tranches?|carres?|pots?|sachets?)$/.test(x); if (unitWord) uname = sing(x); continue; }
+      const u = UNITW.find(([re]) => re.test(x)); if (u && out.length === 0 && !mult && (!/^(soupe|cafe)$/.test(x) || /^(a|c|cuilleres?)$/.test(w[i - 1] || ''))) { spoon = /^(cs|cas|soupe)$/.test(x) ? 'u' : /^(cc|cac|cafe)$/.test(x) ? 'u2' : ''; mult = /^verres?$/.test(x) && /vin|champagne|biere/.test(w.slice(i + 1).join(' ')) ? (/biere/.test(w.join(' ')) ? 250 : 125) : u[1]; unitWord = /^(tranches?|carres?|pots?|sachets?)$/.test(x); if (unitWord) uname = sing(x); continue; }
       if ((x === 'c' || x === 'cuillere' || x === 'cuilleres' || x === 'a' || x === 'la' || x === 'de' || x === 'd' || x === 'des' || x === 'du' || x === 'l' || x === 'aux' || x === 'au') && out.length === 0) continue;
       out.push(x);
     }
@@ -592,7 +597,9 @@ function parseMeal(txt) {
     if (out.length > 1 && !al && !out.some(x => /^(de|d|du|des|a|au|aux|l|la|le|en)$/.test(x))) { const w0 = sing(out[0]), fw0 = sing(norm(f[0]).split(' ')[0]); if (!(fw0 === w0 || fw0.startsWith(w0) || w0.startsWith(fw0))) { const alt = suggest(out[0]).find(x => { const y = sing(norm(x[0]).split(' ')[0]); return y === w0 || y.startsWith(w0); }); if (alt) f = alt; } }
     if (!mult && !f[5]) { const base = norm(f[0]).split(' ')[0].replace(/s$/, ''); const fu = sg.find(x => x[5] && norm(x[0]).replace(/s$/, '') === base) || C.foods.find(x => x[5] && norm(x[0]).replace(/s$/, '') === base); if (fu && fu[5]) f = fu; else if (q && q < 20) { const any = sg.find(x => x[5]); if (any) f = any; } }
     let row;
-    if (mult && f[5] && unitWord) row = { raw, f: f[0], q: q || 1, u: 'u' };
+    const su = !spoon ? '' : f[6] === 'c. à soupe' ? spoon : f[6] === 'c. à café' && spoon === 'u2' ? 'u' : '';
+    if (mult && su) row = { raw, f: f[0], q: q || 1, u: su };
+    else if (mult && f[5] && unitWord) row = { raw, f: f[0], q: q || 1, u: 'u' };
     else if (mult) row = { raw, f: f[0], q: Math.round((q || 1) * mult), u: 'g' };
     else if (f[5] && !q && f[5] >= 250 && norm(f[0]).startsWith(norm(f[6]))) row = { raw, f: f[0], q: 150, u: 'g', check: true };
     else if (f[5]) row = { raw, f: f[0], q: q || 1, u: 'u' };
@@ -615,7 +622,7 @@ function resolveRow(r) {
 }
 function calcDraft() {
   const d = ui.draft, t = { kcal: 0, p: 0, g: 0, l: 0 }, miss = [];
-  d.rows.forEach(r => { const q = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } const g = r.u === 'u' && f[5] ? q * f[5] : q; t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
+  d.rows.forEach(r => { const q = parseFloat(String(r.g).replace(',', '.')) || 0; if (!r.f) return; const f = foodOf(r.f); if (!f) { miss.push(r.f); return; } const g = uG(f, r.u) ? q * uG(f, r.u) : q; t.kcal += f[1] * g / 100; t.p += f[2] * g / 100; t.g += f[3] * g / 100; t.l += f[4] * g / 100; });
   const n = Math.max(1, parseInt(d.pers) || 1);
   return { kcal: Math.round(t.kcal / n), p: Math.round(t.p / n), g: Math.round(t.g / n), l: Math.round(t.l / n), miss };
 }
@@ -678,13 +685,13 @@ function pickSheet(day, slot, mode = 'f') {
     return `<div class="card" style="padding:12px 14px"><div class="row between"><span class="lab">Dans ce repas</span><span class="small muted">${k} kcal</span></div>
     ${a.map((e, i) => { if (e.out) return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div><div class="small muted" style="margin-top:4px">environ ${Math.round(fVals(e).kcal)} kcal · estimation</div></div>`; const f = foodOf(e.f) || []; return `<div class="fedit"><div class="row between"><span>${esc(e.f)}</span><button class="heart" data-rm="${i}">×</button></div>
       <div class="row" style="gap:8px;margin-top:6px"><button class="stp" data-st="${i}|-1">−</button><input inputmode="decimal" data-q="${i}" value="${esc(String(e.q).replace('.', ','))}" style="flex:1;text-align:center;padding:8px">
-      <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${f[5] ? `<option value="u"${e.u === 'u' ? ' selected' : ''}>${esc(f[6])}</option>` : ''}<option value="g"${e.u === 'g' ? ' selected' : ''}>grammes</option></select></div>
+      <button class="stp" data-st="${i}|1">+</button><select data-u="${i}" style="flex:1.3;padding:8px">${uOpts(f, e.u, false)}</select></div>
       <div class="small muted" style="margin-top:4px">${Math.round(fVals(e).kcal)} kcal · ${Math.round(fVals(e).p)} g de protéines</div></div>`; }).join('')}
     <p class="fine center" style="margin:10px 0 0">Ajoute tous tes aliments, puis touche <b>Terminé</b> en haut.</p></div>`; };
   let meal = null;
   const mealCard = () => `<div class="card acts" style="padding:14px 16px;margin-top:12px"><div class="serif" style="font-size:18px">✍️ Écris ce que tu as mangé</div>
     <textarea data-meal rows="3" placeholder="Ex. : 2 œufs brouillés, 50 g de blanc d'œuf, 100 g de poulet, un demi-avocat" style="width:100%;margin-top:8px;padding:10px;border-radius:14px;border:1px solid var(--filet);font:inherit;resize:vertical">${esc(meal ? meal.txt : '')}</textarea>
-    ${meal && meal.rows ? `<div style="margin-top:8px">${meal.rows.map((r, i) => r.f ? `<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--filet)"><span class="small">${esc(r.f)} · <b>${r.u === 'u' ? String(r.q).replace('.', ',') + ' ' + esc(plu((foodOf(r.f) || [])[6] || '', r.q)) + ' <span class="muted">(' + Math.round(r.q * ((foodOf(r.f) || [])[5] || 0)) + ' g)</span>': r.q + ' g'}</b>${r.check ? ' <span style="color:var(--or)">(quantité à vérifier)</span>' : ''}</span><span class="small muted">${Math.round(fVals(r).kcal)} kcal <button class="heart" data-mrm="${i}">×</button></span></div>` : `<div class="small" style="padding:5px 0;color:var(--or)">Je n'ai pas reconnu « ${esc(r.raw)} » : ajoute-le avec la recherche. <button class="heart" data-mrm="${i}">×</button></div>`).join('')}</div>
+    ${meal && meal.rows ? `<div style="margin-top:8px">${meal.rows.map((r, i) => r.f ? `<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--filet)"><span class="small">${esc(r.f)} · <b>${r.u !== 'g' && uG(foodOf(r.f), r.u) ? String(r.q).replace('.', ',') + ' ' + esc(plu(uN(foodOf(r.f), r.u), r.q)) + ' <span class="muted">(' + Math.round(r.q * uG(foodOf(r.f), r.u)) + ' g)</span>': r.q + ' g'}</b>${r.check ? ' <span style="color:var(--or)">(quantité à vérifier)</span>' : ''}</span><span class="small muted">${Math.round(fVals(r).kcal)} kcal <button class="heart" data-mrm="${i}">×</button></span></div>` : `<div class="small" style="padding:5px 0;color:var(--or)">Je n'ai pas reconnu « ${esc(r.raw)} » : ajoute-le avec la recherche. <button class="heart" data-mrm="${i}">×</button></div>`).join('')}</div>
       <div class="grid2 mt"><button class="btn ghost sm" data-mcalc>Recalculer</button><button class="btn sm" data-madd ${meal.rows.some(r => r.f) ? '' : 'disabled'}>Ajouter</button></div>` : `<button class="btn full mt" data-mcalc style="background:var(--sauge-f);border-color:var(--sauge-f)">Calculer</button>`}</div>`;
   const mealWire = () => {
     const ta = body.querySelector('[data-meal]'); if (!ta) return;
@@ -709,9 +716,9 @@ function pickSheet(day, slot, mode = 'f') {
     body.querySelectorAll('[data-addf]').forEach(b => b.onclick = () => { const f = foodOf(b.dataset.addf); list().unshift({ f: f[0], q: f[5] ? 1 : 100, u: f[5] ? 'u' : 'g' });
       S.recentF = [f[0]].concat((S.recentF || []).filter(x => x !== f[0])).slice(0, 12); save(); pq.value = ''; foodBody(); el.querySelector('.in').scrollTop = 0; });
     body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { list().splice(+b.dataset.rm, 1); save(); foodBody(); });
-    body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.st.split('|'); const e = list()[+i]; const step = e.u === 'u' ? 0.5 : 10; e.q = Math.max(step, Math.round(((+e.q || 0) + d * step) * 10) / 10); save(); foodBody(); });
+    body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.st.split('|'); const e = list()[+i]; const step = e.u === 'g' ? 10 : 0.5; e.q = Math.max(step, Math.round(((+e.q || 0) + d * step) * 10) / 10); save(); foodBody(); });
     body.querySelectorAll('[data-q]').forEach(b => b.onchange = () => { const v = parseFloat(b.value.replace(',', '.')); if (v > 0) { list()[+b.dataset.q].q = v; save(); } foodBody(); });
-    body.querySelectorAll('[data-u]').forEach(b => b.onchange = () => { const e = list()[+b.dataset.u], f = foodOf(e.f); e.u = b.value; e.q = e.u === 'u' ? 1 : (f && f[5]) || 100; save(); foodBody(); });
+    body.querySelectorAll('[data-u]').forEach(b => b.onchange = () => { const e = list()[+b.dataset.u], f = foodOf(e.f); e.u = b.value; e.q = e.u === 'g' ? (f && f[5]) || 100 : 1; save(); foodBody(); });
   };
   let ow = 'resto';
   const outBody = () => {
@@ -1147,7 +1154,7 @@ const ACT = {
     const ty = $('#o_type').value, t = calcDraft(), n = Math.max(1, parseInt(d.pers) || 1);
     const r = { id: 'own' + Date.now(), t: d.t, type: ['sucre', 'sale'].includes(ty) ? 'pdj' : 'plat', cat: ty === 'plat' ? 'plat' : ty, tag: 'Ma recette', time: '', pers: n + (n > 1 ? ' pers.' : ' pers.'),
       kcal: t.kcal, p: t.p, g: t.g, l: t.l, img: d.img || null,
-      ing: d.rows.filter(x => x.f).map(x => { const f = foodOf(x.f); if (!x.g) return x.f; if (f && x.u === 'u' && f[5]) return `${x.f} : ${x.g} ${f[6]}${parseFloat(x.g) > 1 && !f[6].includes(' ') && !/s$/.test(f[6]) ? 's' : ''}`; return `${x.f} : ${x.g} g`; }), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
+      ing: d.rows.filter(x => x.f).map(x => { const f = foodOf(x.f); if (!x.g) return x.f; if (f && x.u === 'u2' && U2(f)) return `${x.f} : ${x.g} c. à café`; if (f && x.u === 'u' && f[5]) return `${x.f} : ${x.g} ${f[6]}${parseFloat(x.g) > 1 && !f[6].includes(' ') && !/s$/.test(f[6]) ? 's' : ''}`; return `${x.f} : ${x.g} g`; }), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
     S.own.push(r); ui.draft = null;
     const pd = ui.pending; ui.pending = null;
     if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
