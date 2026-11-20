@@ -1091,7 +1091,7 @@ function vProfil() {
   <a class="card tap row" href="${C.insta}" target="_blank" style="text-decoration:none"><div class="grow"><span class="lab">Instagram</span><div>@clemence.marchadour</div></div><span>›</span></a>
   <a class="card tap row" href="mailto:clemence@belles-soeurs.com?subject=${encodeURIComponent('Le Club Clem')}" style="text-decoration:none"><div class="grow"><span class="lab">Une question, une idée ?</span><div>Contacter Clem</div><div class="small muted">clemence@belles-soeurs.com</div></div><span>✉️</span></a>
   ${installHint()}
-  <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Tes essentiels et tout ce que tu notes dans Mon journal (ressenti, cycle, notes, mesures) restent uniquement sur ton téléphone : personne n'y a accès, même pas moi. Ton rituel, tes repas, tes séances et tes favoris sont sauvegardés sur ton compte sécurisé, pour que tu les retrouves si tu changes de téléphone. Je ne les consulte jamais, et rien n'est jamais partagé, vendu ou utilisé à des fins publicitaires.</p></div>
+  <div class="card"><span class="lab">Confidentialité</span><p class="small" style="margin:6px 0 0">Tes essentiels et tout ce que tu notes dans Mon journal (ressenti, cycle, notes, mesures) restent uniquement sur ton téléphone : personne n'y a accès, même pas moi. Ton rituel, tes repas, tes séances et tes favoris sont sauvegardés sur ton compte sécurisé, pour que tu les retrouves si tu changes de téléphone. Rien n'est jamais partagé, vendu ou utilisé à des fins publicitaires.</p></div>
   <button class="btn ghost full mt" data-act="logout">Me déconnecter</button>`;
 }
 
