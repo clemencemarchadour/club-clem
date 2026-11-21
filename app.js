@@ -288,9 +288,9 @@ function showBsd(ph, after) {
   const av = ph === 'avant', p = prenom();
   const o = document.createElement('div'); o.className = 'bmodal';
   o.innerHTML = `<div class="bbox" style="padding:0;overflow:hidden"><img src="img/ban/v4.jpg" alt="" style="width:100%;height:170px;object-fit:cover;object-position:50% 56%;display:block">
-  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : "Belles Sœurs Days · C'est parti"}</span>
+  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? `Belles Sœurs Days · ${bsdQ().des}` : "Belles Sœurs Days · C'est parti"}</span>
   <h2 class="serif" style="font-size:27px;line-height:1.15;margin:12px 0 0">${av ? `${p ? esc(p) + ', ton' : 'Ton'} mois de Collagène OFFERT` : `${p ? esc(p) + ', c' : 'C'}'est le moment !`}</h2>
-  <p class="muted" style="margin:12px 0 0;line-height:1.5">${av ? `Parce que tu fais partie du Club, tu es la première au courant, avant tout le monde : pendant les Belles Sœurs Days, à partir du 22 novembre, ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.` : `Les Belles Sœurs Days ont commencé : ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.`}</p>
+  <p class="muted" style="margin:12px 0 0;line-height:1.5">${av ? `Parce que tu fais partie du Club, tu es la première au courant, avant tout le monde : pendant les Belles Sœurs Days, ${bsdQ().apartir}, ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.` : `Les Belles Sœurs Days ont commencé : ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, d'une valeur de 79 €. Dans la limite des stocks disponibles.`}</p>
   ${av ? `<button class="btn full" style="margin-top:20px" id="bgo">Découvrir mon cadeau</button>` : `<a class="btn full" style="margin-top:20px" id="bgo" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
   <button class="link" style="margin-top:14px" id="bok">Plus tard</button></div></div>`;
   document.body.appendChild(o);
@@ -1283,6 +1283,8 @@ boot();
 // BSD_PHASE : null (rien), 'avant' (annonce « Dès le 22 »), 'pendant' (offre en ligne).
 // On ne change de phase QUE sur le go de Clem. Retrait automatique après BSD_END. Aperçu : ?bsd=avant ou ?bsd=pendant
 const BSD_PHASE = 'avant', BSD_END = '2026-12-02', BSD_MIN = '145 €';
+// Quand : « dès demain » la veille, « dès aujourd'hui » le jour J, sinon la date
+const bsdQ = () => { const t = today(); return t === '2026-11-21' ? { des: 'Dès demain', apartir: 'à partir de demain' } : t === '2026-11-22' ? { des: "Dès aujourd'hui", apartir: "à partir d'aujourd'hui" } : { des: 'Dès le 22 novembre', apartir: 'à partir du 22 novembre' }; };
 const BSD_PREVIEW = (location.search.match(/[?&]bsd=(avant|pendant)/) || [])[1];
 function bsdPhase() {
   if (BSD_PREVIEW) return BSD_PREVIEW;
@@ -1294,9 +1296,9 @@ function bsdBanner(ph) {
   const sub = encodeURIComponent('Club Clem · Conseil Belles Sœurs Days');
   return `<div class="card center" style="border:1.5px solid var(--or);padding:0;overflow:hidden">
   <img src="img/ban/v4.jpg" style="width:100%;height:190px;object-fit:cover;object-position:50% 56%;display:block" alt="">
-  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? 'Belles Sœurs Days · Dès le 22 novembre' : 'Belles Sœurs Days · En ce moment'}</span>
+  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? `Belles Sœurs Days · ${bsdQ().des}` : 'Belles Sœurs Days · En ce moment'}</span>
   <div class="serif" style="font-size:24px;line-height:1.15;margin-top:8px">Ton mois de Collagène OFFERT</div>${av ? `<p class="small" style="margin:6px 0 0;color:var(--brun)">En avant-première, rien que pour les membres du Club : personne d'autre n'est encore au courant.</p>` : ''}
-  <p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? 'À partir du 22 novembre, dans' : 'Dans'} la limite des stocks disponibles.</p>
+  <p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? cap(bsdQ().apartir) + ', dans' : 'Dans'} la limite des stocks disponibles.</p>
   ${av ? `<button class="btn full mt" data-go="rituel|fiche|collagene">Découvrir mon cadeau</button>` : `<a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--filet);display:flex;flex-direction:column;gap:8px;text-align:left">
   <a style="font-size:13px;color:var(--txt2);text-decoration:none;line-height:1.4" href="mailto:clemence@belles-soeurs.com?subject=${sub}">Un conseil pour choisir ? <u style="color:var(--brun)">Écris-moi</u></a>
@@ -1314,7 +1316,7 @@ function prepCard() {
 }
 function bsdFiche(ph) {
   const t = ph === 'avant'
-    ? `<b>Belles Sœurs Days, dès le 22 novembre</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, quels que soient les produits de ton panier : compléments, soins, tout compte.<br><br><span class="small">Par exemple, si tu prends ton rituel de 3 mois de Collagène, ton 4e mois est offert : 4 mois pour le prix de 3.</span><br><br>Dans la limite des stocks disponibles.`
+    ? `<b>Belles Sœurs Days, ${bsdQ().des.toLowerCase()}</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, quels que soient les produits de ton panier : compléments, soins, tout compte.<br><br><span class="small">Par exemple, si tu prends ton rituel de 3 mois de Collagène, ton 4e mois est offert : 4 mois pour le prix de 3.</span><br><br>Dans la limite des stocks disponibles.`
     : `<b>C'est le moment</b><br>Ton mois de Collagène Liquide est offert dès ${BSD_MIN} d'achat, quels que soient les produits de ton panier : compléments, soins, tout compte.<br><br><span class="small">Par exemple, si tu prends ton rituel de 3 mois de Collagène, ton 4e mois est offert : 4 mois pour le prix de 3.</span><br><br>Dans la limite des stocks disponibles.`;
   return `<div class="card" style="border:1.5px solid var(--or);background:#FBF5E8;margin-top:16px"><span style="font-size:20px">🎁</span><p style="margin:6px 0 0;line-height:1.45">${t}</p></div>`;
 }
@@ -1327,8 +1329,8 @@ function vPrep() {
   const mine = prepMine(), ids = new Set(mine.map(p => p.id)), rest = C.produits.filter(p => !ids.has(p.id));
   const av = bsdPhase() === 'avant';
   return `${back('Ma journée', 'journee')}<h2>Préparer ma commande</h2>
-  <p class="muted small">Coche ce que tu veux commander pendant les Belles Sœurs Days. Ta liste reste enregistrée ici${av ? ', prête pour le 22 novembre' : ''}.</p>
-  <div class="card" style="border:1.5px solid var(--or);background:#FBF5E8"><span style="font-size:20px">🎁</span><p class="small" style="margin:6px 0 0">${av ? 'Rappel' : 'En ce moment'} : ton mois de Collagène Liquide est offert dès <b>${BSD_MIN} d'achat</b>${av ? ', à partir du 22 novembre' : ''}, dans la limite des stocks disponibles.</p></div>
+  <p class="muted small">Coche ce que tu veux commander pendant les Belles Sœurs Days. Ta liste reste enregistrée ici${av ? ', prête pour le grand jour' : ''}.</p>
+  <div class="card" style="border:1.5px solid var(--or);background:#FBF5E8"><span style="font-size:20px">🎁</span><p class="small" style="margin:6px 0 0">${av ? 'Rappel' : 'En ce moment'} : ton mois de Collagène Liquide est offert dès <b>${BSD_MIN} d'achat</b>${av ? ', ' + bsdQ().apartir : ''}, dans la limite des stocks disponibles.</p></div>
   ${mine.length ? `<p class="lab mt2">Mon rituel</p>${mine.map(prow).join('')}` : ''}
   <p class="lab mt2">${mine.length ? 'Toute la gamme' : 'La gamme'}</p>${rest.map(prow).join('')}
   <p class="lab mt2">Et aussi</p>
