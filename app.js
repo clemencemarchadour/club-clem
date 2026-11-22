@@ -1282,7 +1282,7 @@ boot();
 // ===== Belles Sœurs Days =====
 // BSD_PHASE : null (rien), 'avant' (annonce « Dès le 22 »), 'pendant' (offre en ligne).
 // On ne change de phase QUE sur le go de Clem. Retrait automatique après BSD_END. Aperçu : ?bsd=avant ou ?bsd=pendant
-const BSD_PHASE = 'avant', BSD_END = '2026-12-02', BSD_MIN = '145 €';
+const BSD_PHASE = 'pendant', BSD_END = '2026-12-02', BSD_MIN = '145 €';
 // Quand : « dès demain » la veille, « dès aujourd'hui » le jour J, sinon la date
 const bsdQ = () => { const t = today(); return t === '2026-11-21' ? { des: 'Dès demain', apartir: 'à partir de demain' } : t === '2026-11-22' ? { des: "Dès aujourd'hui", apartir: "à partir d'aujourd'hui" } : { des: 'Dès le 22 novembre', apartir: 'à partir du 22 novembre' }; };
 const BSD_PREVIEW = (location.search.match(/[?&]bsd=(avant|pendant)/) || [])[1];
