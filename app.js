@@ -205,7 +205,7 @@ async function boot() {
     else if (!error) { localStorage.removeItem('cc_k'); gateView(); return; }
   } catch (e) { }
   if (!k) { gateView(); return; }
-  try { C = await decryptContent(k); } catch (e) { app.innerHTML = '<div class="wrap"><div class="card">Impossible de charger le Club. Vérifie ta connexion et réessaie.</div></div>'; return; }
+  try { C = await decryptContent(k); C.recipes = C.recipes.filter(r => !r.added || r.added <= today()); } catch (e) { app.innerHTML = '<div class="wrap"><div class="card">Impossible de charger le Club. Vérifie ta connexion et réessaie.</div></div>'; return; }
   try { const { data } = await sb.from('members').select('prenom,role').maybeSingle(); ME = data || {}; } catch (e) { ME = {}; }
   try { sb.rpc('member_count').then(({ data }) => { if (typeof data === 'number' && data !== MEMBERS) { MEMBERS = data; if (ui.tab === 'journee' && !document.querySelector('.sheet, .bmodal')) render(); } }).catch(() => { }); } catch (e) { }
   loadLocal(); await pullRemote();
@@ -274,6 +274,8 @@ function showMot(after) {
   L.motSeen = today(); save();
   const ph = bsdPhase();
   if (ph && (S.bsdSeen || {})[ph] !== 1) return showBsd(ph, after);
+  const nw = C.recipes.filter(r => r.added === today());
+  if (nw.length) return showNew(nw, after);
   const h = new Date().getHours(), p = prenom();
   const hi = (h < 12 ? 'Bonjour' : h < 18 ? 'Bel après-midi' : 'Bonsoir') + (p ? ' ' + p : '');
   const o = document.createElement('div'); o.className = 'bmodal';
@@ -282,6 +284,19 @@ function showMot(after) {
   <button class="btn full" id="bok">Merci Clem</button></div>`;
   document.body.appendChild(o);
   o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
+}
+const newWhat = nw => { const k = { plat: ['un nouveau plat', 'nouveaux plats'], dessert: ['un nouveau dessert', 'nouveaux desserts'], encas: ['un nouvel en-cas', 'nouveaux en-cas'], pdj: ['un nouveau petit-déj', 'nouveaux petits-déj'] }; const c = {}; nw.forEach(r => { const t = k[r.cat] ? r.cat : r.type === 'pdj' ? 'pdj' : 'plat'; c[t] = (c[t] || 0) + 1; }); const parts = Object.entries(c).map(([t, n]) => n > 1 ? n + ' ' + k[t][1] : k[t][0]); const s = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' et ' + parts[parts.length - 1] : parts[0]; return s.charAt(0).toUpperCase() + s.slice(1); };
+function showNew(nw, after) {
+  const p = prenom(), o = document.createElement('div'); o.className = 'bmodal';
+  o.innerHTML = `<div class="bbox" style="padding:0;overflow:hidden">${nw[0].img ? `<img src="${nw[0].img}" alt="" style="width:100%;height:170px;object-fit:cover;display:block">` : ''}
+  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or)">Nouveau cette semaine</span>
+  <h2 class="serif" style="font-size:27px;line-height:1.15;margin:12px 0 0">${p ? esc(p) + ', de' : 'De'} nouvelles recettes sont dispo !</h2>
+  <p class="muted" style="margin:12px 0 0;line-height:1.5">${newWhat(nw)} t'attend${nw.length > 1 ? 'ent' : ''} dans À table. Bon appétit 🤎</p>
+  <button class="btn full" style="margin-top:20px" id="bgo">Je découvre</button>
+  <button class="link" style="margin-top:14px" id="bok">Plus tard</button></div></div>`;
+  document.body.appendChild(o);
+  o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
+  o.querySelector('#bgo').onclick = () => { o.remove(); ui.tableSeg = 'recettes'; ui.filter = 'new'; go('table'); };
 }
 function showBsd(ph, after) {
   S.bsdSeen = S.bsdSeen || {}; S.bsdSeen[ph] = 1; save();
@@ -481,10 +496,10 @@ function filtered() {
   const all = C.recipes.concat(S.own.map(r => Object.assign({ mine: true }, r)));
   const q = norm(ui.q || '').split(/\s+/).filter(Boolean);
   return all.filter(r => !q.length || q.every(w => norm([r.t, r.tag, (r.ing || []).join(' ')].join(' ')).includes(w))).filter(r => f === 'all' || (f === 'sucre' && r.type === 'pdj' && r.cat === 'sucre') || (f === 'sale' && r.type === 'pdj' && r.cat === 'sale')
-    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && r.cat === 'encas') || (f === 'dessert' && (r.cat === 'dessert' || r.dess)) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine)).sort((a, b) => f === 'dessert' ? dw(a) - dw(b) : 0);
+    || (f === 'plat' && r.type === 'plat' && r.cat === 'plat') || (f === 'encas' && r.cat === 'encas') || (f === 'dessert' && (r.cat === 'dessert' || r.dess)) || (f === 'favs' && S.favs.includes(r.id)) || (f === 'mine' && r.mine) || (f === 'new' && isNew(r))).sort((a, b) => (isNew(b) ? 1 : 0) - (isNew(a) ? 1 : 0) || (f === 'dessert' ? dw(a) - dw(b) : 0));
 }
 function vRecettes() {
-  const F = [['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas'], ['dessert', 'Desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
+  const F = [...(C.recipes.some(isNew) ? [['new', 'Nouveautés ✨']] : []), ['all', 'Toutes'], ['sucre', 'Petit-déj sucré'], ['sale', 'Petit-déj salé'], ['plat', 'Plats'], ['encas', 'En-cas'], ['dessert', 'Desserts'], ['favs', 'Préférées'], ['mine', 'Mes recettes']];
   const list = filtered();
   return `<div class="card acts tap row mt" data-go="table|frigo|" style="padding:14px 16px"><span style="font-size:26px">🧺</span><div class="grow"><div class="serif" style="font-size:18px">Dans mon frigo</div><div class="small" style="color:var(--txt2)">Dis-moi ce que tu as, je te dis quoi cuisiner</div></div><span>›</span></div>
   <input type="search" id="rq" class="mt" placeholder="Rechercher : poulet, avocat, pancakes…" value="${esc(ui.q || '')}" autocomplete="off" enterkeyhint="search">
@@ -492,20 +507,23 @@ function vRecettes() {
   <div class="rlist">${rList(list)}</div>
   <button class="btn ghost full mt" data-act="newOwn">+ Ajouter ma propre recette</button>`;
 }
+// Nouveautés : visibles 7 jours avec la pastille « Nouveau »
+const isNew = r => r.added && r.added <= today() && diffDays(r.added, today()) < 7;
+const newPill = r => isNew(r) ? `<span class="pill" style="background:#FBF5E8;color:var(--or);border:1px solid var(--or);margin-left:6px;vertical-align:1px">Nouveau</span>` : '';
 const dw = r => r.dess ? 2 : String(r.id).startsWith('d3_') ? 0 : 1;
 function rList(list) {
   return list.map(rCard).join('') || `<p class="muted center mt2">${ui.q ? 'Aucune recette ne correspond à ta recherche.' : 'Rien ici pour l\'instant.'}</p>`;
 }
 function rCard(r) {
   return `<div class="card tap row" data-go="table|recette|${r.id}">${r.img ? `<img class="thumb" src="${r.img}" alt="" loading="lazy">` : '<div class="thumb"></div>'}
-  <div class="grow"><div class="lab">${esc(r.tag || 'Ma recette')}</div><div class="serif" style="font-size:17px;margin:3px 0">${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div>
+  <div class="grow"><div class="lab">${esc(r.tag || 'Ma recette')}${newPill(r)}</div><div class="serif" style="font-size:17px;margin:3px 0">${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div>
   <button class="heart" data-act="fav" data-v="${r.id}" aria-label="Favori">${S.favs.includes(r.id) ? '♥' : '♡'}</button></div>`;
 }
 function vRecette(id) {
   const r = R(id); if (!r) return back('Recettes', 'table') + '<p>Recette introuvable.</p>';
   return `${back('Recettes', 'table')}
   ${r.img ? `<img class="hero" src="${r.img}" alt="">` : ''}
-  <div class="row between mt"><span class="lab">${esc(r.tag || 'Ma recette')}</span><button class="heart" data-act="fav" data-v="${r.id}">${S.favs.includes(r.id) ? '♥' : '♡'}</button></div>
+  <div class="row between mt"><span class="lab">${esc(r.tag || 'Ma recette')}${newPill(r)}</span><button class="heart" data-act="fav" data-v="${r.id}">${S.favs.includes(r.id) ? '♥' : '♡'}</button></div>
   <h1 style="margin-top:4px">${esc(r.t)}</h1>
   <p class="muted small">${[r.time, r.pers].filter(Boolean).map(esc).join(' · ')}</p>
   ${r.kcal ? `<div class="macros"><div><b>${r.kcal}</b><span>kcal</span></div><div><b>${r.p}</b><span>protéines</span></div><div><b>${r.g}</b><span>glucides</span></div><div><b>${r.l}</b><span>lipides</span></div></div><p class="fine center" style="margin-top:-6px">par portion</p>` : ''}
