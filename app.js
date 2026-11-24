@@ -962,8 +962,9 @@ function vRituel() {
   const t = today(), pr = todayPrises(), tk = S.taken[t] || {};
   const low = Object.entries(S.mine).map(([id, m]) => ({ p: P(id), left: stockLeft(id) })).filter(x => x.p && x.left <= 5);
   return `${headBlock()}
-  ${low.map(x => `<div class="alert"><span class="lab" style="color:var(--filet)">Bientôt en rupture</span><h3 class="mt">${x.left > 0 ? `Il te reste environ ${x.left} jour${x.left > 1 ? 's' : ''} de ${esc(x.p.name)}` : `Ta boîte de ${esc(x.p.name)} doit être terminée`}</h3>
-    <div class="grid2 mt"><a class="btn sm" href="${x.p.link || C.shop}" target="_blank">Je recommande chez Clem</a><button class="btn sm" style="background:transparent;color:var(--ivoire);border:1px solid var(--ivoire)" data-act="newBox" data-v="${x.p.id}">J'ai reçu ma boîte</button></div></div>`).join('')}
+  ${low.length ? `<div class="card" style="border-left:3px solid var(--or)"><span class="lab" style="color:var(--or)">Bientôt la fin de ${low.length > 1 ? 'tes boîtes' : 'ta boîte'}</span>
+  ${low.map((x, i) => `<div class="row" style="gap:12px;padding:12px 0 ${i < low.length - 1 ? '12px' : '2px'};${i < low.length - 1 ? 'border-bottom:1px solid var(--filet)' : ''}"><img class="prod" src="${x.p.img}" alt=""><div class="grow"><div class="serif" style="font-size:17px">${esc(x.p.name)}</div><div class="small" style="color:var(--or);font-weight:500">${x.left > 0 ? `Encore environ ${x.left} jour${x.left > 1 ? 's' : ''}` : 'Ta boîte doit être terminée'}</div>
+    <div class="row small" style="gap:16px;margin-top:6px"><a href="${x.p.link || C.shop}" target="_blank" style="color:var(--brun);font-weight:500;text-decoration:underline;text-underline-offset:3px">Recommander chez Clem</a><button class="link small" data-act="newBox" data-v="${x.p.id}" style="color:var(--sauge-f);font-weight:500">Je l'ai reçue</button></div></div></div>`).join('')}</div>` : ''}
   ${Object.values(S.mine).some(m => m.todo) ? `<div class="card tap" data-act="stAll" style="background:var(--sauge-c);border-color:var(--sauge-c)"><span class="lab" style="color:var(--sauge-f)">10 secondes</span><div class="serif" style="font-size:19px;margin-top:4px">Où en sont tes boîtes ?</div><p class="small" style="margin:4px 0 0;color:var(--txt2)">Dis-moi où tu en es pour que je te prévienne avant la fin de ton stock. →</p></div>` : ''}
   <div class="card"><span class="lab">Mes prises du jour</span>
   ${MOMENTS.map(([m, l]) => { const xs = pr.filter(p => p.moment === m); return xs.length ? `<p class="lab mt" style="color:var(--brun)">${l}</p>` + xs.map(p => `<div class="check ${tk[p.id] ? 'on' : ''}" data-act="take" data-v="${p.id}"><span class="box">${tk[p.id] ? '✓' : ''}</span><img class="prod" src="${p.img}" alt=""><span class="ctext grow">${esc(p.name)}<br><span class="small muted">${esc(p.dose)}</span></span></div>`).join('') : ''; }).join('')}
@@ -1023,6 +1024,7 @@ function vJournal() {
   <div class="small" style="text-align:right;margin-top:4px;color:${j[k] ? 'var(--brun)' : 'var(--taupe)'}">${j[k] ? esc(w[j[k] - 1]) : esc(w[0]) + ' → ' + esc(w[4])}</div></div>`).join('')}
   ${j.note || ui.jnOpen === d ? `<div style="padding-top:12px"><span class="small muted">Un mot sur ta journée</span><textarea id="jnote" placeholder="Ce que j'ai remarqué aujourd'hui…" style="margin-top:6px;min-height:46px;height:auto" rows="2">${esc(j.note || '')}</textarea></div>` : `<button class="link small" data-act="jnOpen" style="margin-top:12px">+ Un mot sur ta journée ? (facultatif)</button>`}</div>
   ${cycleCard(d)}
+  ${weekCard()}
   <div class="card"><span class="lab">Mes 14 derniers jours</span>${chart()}</div>
   ${notesCard()}
   <div class="card"><div class="row between"><span class="lab">Mes mesures</span><button class="toggle ${L.showMes ? 'on' : ''}" data-act="showMes" aria-label="Afficher"></button></div>
@@ -1031,6 +1033,28 @@ function vJournal() {
     <p class="center mt"><button class="link" data-go="journal|guide|">Comment prendre mes mensurations ?</button></p>
     ${L.mesures.length ? `<ul class="clean mt">${L.mesures.slice().reverse().slice(0, 8).map(m => `<li class="small"><b>${parse(m.date).getDate()} ${MOIS[parse(m.date).getMonth()]}</b> · ${['poids', 'taille', 'hanches', 'cuisse'].filter(k => m[k]).map(k => m[k] + (k === 'poids' ? ' kg' : ' cm') + ' ' + ({ poids: '', taille: 'taille', hanches: 'hanches', cuisse: 'cuisse' }[k])).join(' · ')}</li>`).join('')}</ul>` : ''}`
       : '<p class="fine">Tes mesures sont masquées.</p>'}</div>`;
+}
+
+function weekCard() {
+  const t = today(), days = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6));
+  const rit = d => !!(S.taken[d] && Object.values(S.taken[d]).some(Boolean));
+  const meal = d => dayHas(d), mv = d => (S.moves[d] || 0) > 0;
+  const cell = on => `<span style="display:flex;justify-content:center"><i style="width:10px;height:10px;border-radius:50%;${on ? 'background:var(--sauge)' : 'border:1.5px solid var(--filet)'}"></i></span>`;
+  const G = 'display:grid;grid-template-columns:1fr repeat(7,20px) 56px;align-items:center;gap:0 4px;padding:9px 0';
+  const row = (lab, f, txt) => `<div style="${G};border-top:1px solid var(--filet)"><span style="white-space:nowrap">${lab}</span>${days.map(d => cell(f(d))).join('')}<b class="small" style="text-align:right;color:var(--or)">${txt}</b></div>`;
+  const nR = days.filter(rit).length, nM = days.filter(meal).length, mins = days.reduce((a, d) => a + (S.moves[d] || 0), 0);
+  const md = days.filter(meal), prot = md.length ? Math.round(md.reduce((a, d) => a + dayTotal(d).p, 0) / md.length) : 0;
+  const wd = days.filter(d => S.water && S.water[d]), eau = wd.length ? (wd.reduce((a, d) => a + S.water[d], 0) * 0.25 / wd.length).toFixed(1).replace('.', ',') : null;
+  const avg = k => { const v = days.map(d => (L.journal[d] || {})[k]).filter(Boolean); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0; };
+  const fe = FEEL.map(([k, l, w]) => { const a = avg(k); return a ? `<div class="row between small" style="padding:3px 0"><span class="muted">${l}</span><b>${esc(w[a - 1])}</b></div>` : ''; }).join('');
+  const p0 = parse(days[0]), p6 = parse(t);
+  const mot = nR >= 6 ? "Ton rituel est bien installé, c'est ta régularité qui fera la différence." : nR >= 4 ? 'Belle semaine ! Ancre ton rituel au même moment chaque jour pour ne plus y penser.' : 'Chaque jour compte, on repart ensemble cette semaine.';
+  return `<div class="card"><div class="row between"><span class="lab">Ma semaine</span><span class="small muted">${p0.getDate()} ${p0.getMonth() !== p6.getMonth() ? MOIS[p0.getMonth()] + ' ' : ''}→ ${p6.getDate()} ${MOIS[p6.getMonth()]}</span></div>
+  <div style="${G};padding-top:12px"><span></span>${days.map(d => `<span class="muted" style="text-align:center;font-size:11px">${JOURS[parse(d).getDay()][0].toUpperCase()}</span>`).join('')}<span></span></div>
+  ${row('Rituel', rit, `${nR}/7`)}${row('Repas', meal, `${nM}/7`)}${row('Bouger', mv, `${mins} min`)}
+  <div class="row" style="border-top:1px solid var(--filet);padding-top:12px;gap:24px"><div><span class="small muted">Protéines</span><div class="serif" style="font-size:30px;color:var(--or)">${prot ? prot + ' g' : '–'}<span class="small muted" style="font-family:Jost"> /jour</span></div></div><div><span class="small muted">Hydratation</span><div class="serif" style="font-size:30px;color:var(--or)">${eau ? eau + ' L' : '–'}<span class="small muted" style="font-family:Jost"> /jour</span></div></div></div>
+  ${fe ? `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--filet)"><span class="small muted">Mon ressenti moyen</span>${fe}</div>` : ''}
+  <p class="small muted" style="margin:12px 0 0;font-style:italic">« ${mot} » Clem</p></div>`;
 }
 // Cycle : uniquement sur le téléphone (L), aucune prédiction, juste le jour du cycle
 const rgList = () => (L.regles || []).slice().sort();
