@@ -44,7 +44,7 @@ const longDate = s => { const d = parse(s); return `${JOURS[d.getDay()]} ${d.get
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stockage ---------- */
-const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, recentF: [], favF: [], level: 'debute', own: [], updated: 0 });
+const DEF_S = () => ({ favs: [], plan: {}, extra: [], checked: {}, mine: {}, taken: {}, moves: {}, acts: {}, badges: {}, water: {}, hide: [], eat: {}, por: {}, recentF: [], favF: [], level: 'debute', own: [], updated: 0 });
 const DEF_L = () => ({ journal: {}, mesures: [], showMes: true, ess: [], essT: {} });
 function loadLocal() {
   try { S = Object.assign(DEF_S(), JSON.parse(localStorage.getItem('cc_s_' + USER.id) || '{}')); } catch (e) { S = DEF_S(); }
@@ -411,9 +411,13 @@ const fVals = e => { if (e.out) { const o = OUT_S.find(x => x[0] === e.out.s); r
 const fVals0 = e => { const f = foodOf(e.f), g = fGrams(e); return f ? { kcal: f[1] * g / 100, p: f[2] * g / 100, g: f[3] * g / 100, l: f[4] * g / 100 } : { kcal: 0, p: 0, g: 0, l: 0 }; };
 const plu = (u, q) => { if (!u || +q <= 1) return u; const w = u.split(' '); if (/[sx.]$/.test(w[0])) return u; w[0] = w[0] + (/(eau|eu)$/.test(w[0]) ? 'x' : 's'); return w.join(' '); };
 const fQty = e => { if (e.out) return 'estimation'; const f = foodOf(e.f); const q = String(e.q).replace('.', ','); return uG(f, e.u) ? `${q} ${plu(uN(f, e.u), e.q)}` : `${q} g`; };
+const porOf = (d, k) => ((S.por || {})[d] || {})[k] || 1;
+const porSet = (d, k, q) => { const p = S.por || (S.por = {}); if (q === 1) { if (p[d]) { delete p[d][k]; if (!Object.keys(p[d]).length) delete p[d]; } } else (p[d] = p[d] || {})[k] = q; };
+const PORS = [[0.5, '½'], [1, '1'], [1.5, '1½'], [2, '2']];
+const porRow = (d, k) => { const q = porOf(d, k); return `<div class="addf row" style="gap:6px;margin:2px 0 8px;align-items:center"><span class="small muted" style="margin-right:2px">Portion</span>${PORS.map(([v, l]) => `<button data-act="por" data-v="${d}|${k}|${v}" style="min-width:38px;height:30px;padding:0 10px;border-radius:15px;font:inherit;font-size:14px;cursor:pointer;${v === q ? 'background:var(--sauge);color:#fff;border:1px solid var(--sauge)' : 'background:transparent;color:var(--brun);border:1px solid var(--filet)'}">${l}</button>`).join('')}</div>`; };
 function dayTotal(day) {
   const plan = S.plan[day] || {}, tot = { kcal: 0, p: 0, g: 0, l: 0 };
-  SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0)); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
+  SLOTS.forEach(([k]) => { const r = plan[k] && R(plan[k]), q = porOf(day, k); if (r) ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += (+r[x] || 0) * q); eatOf(day, k).forEach(e => { const v = fVals(e); ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] += v[x]); }); });
   ['kcal', 'p', 'g', 'l'].forEach(x => tot[x] = Math.round(tot[x])); return tot;
 }
 const dayHas = d => Object.values(S.plan[d] || {}).some(Boolean) || Object.values((S.eat || {})[d] || {}).some(a => a && a.length);
@@ -422,13 +426,13 @@ function slotRow(day, k, l) {
   const fk = Math.round(foods.reduce((a, e) => a + fVals(e).kcal, 0));
   const head = r
     ? `<div class="slot">${r.img ? `<img src="${r.img}" alt="">` : '<div class="empty filled">✎</div>'}
-      <div class="grow" data-go="table|recette|${r.id}" style="cursor:pointer"><div class="lab">${l}</div><div>${esc(r.t)}</div>${r.kcal || r.time ? `<div class="small muted">${[r.time, r.kcal ? r.kcal + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
+      <div class="grow" data-go="table|recette|${r.id}" style="cursor:pointer"><div class="lab">${l}</div><div>${esc(r.t)}</div>${r.kcal || r.time ? `<div class="small muted">${[r.time, r.kcal ? Math.round(r.kcal * porOf(day, k)) + ' kcal' : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
       <button class="heart" data-act="unplan" data-v="${day}|${k}" aria-label="Retirer">×</button></div>`
     : foods.length
       ? `<div class="slot" style="border-bottom:0;padding-bottom:2px"><div class="empty filled" data-act="pick" data-v="${day}|${k}|f">+</div><div class="grow" data-act="pick" data-v="${day}|${k}|f" style="cursor:pointer"><div class="lab">${l}</div><div class="small muted">${fk} kcal</div></div></div>`
       : `<div class="slot"><div class="empty" data-act="pick" data-v="${day}|${k}">+</div><div class="grow" data-act="pick" data-v="${day}|${k}" style="cursor:pointer"><div class="lab">${l}</div><div><span class="muted">Ajouter des aliments ou une recette</span></div></div></div>`;
-  if (!foods.length) return r ? `<div class="slotwrap">${head}<div class="addf"><button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>` : head;
-  return `<div class="slotwrap">${head}<div class="flist">${foods.map((e, i) => `<div class="fline"><span class="grow">${esc(e.f)} <span class="muted">· ${esc(fQty(e))}</span></span><span class="small muted">${Math.round(fVals(e).kcal)} kcal</span><button class="heart" data-act="rmFood" data-v="${day}|${k}|${i}" aria-label="Retirer">×</button></div>`).join('')}
+  if (!foods.length) return r ? `<div class="slotwrap">${head}${porRow(day, k)}<div class="addf"><button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>` : head;
+  return `<div class="slotwrap">${head}${r ? porRow(day, k) : ''}<div class="flist">${foods.map((e, i) => `<div class="fline"><span class="grow">${esc(e.f)} <span class="muted">· ${esc(fQty(e))}</span></span><span class="small muted">${Math.round(fVals(e).kcal)} kcal</span><button class="heart" data-act="rmFood" data-v="${day}|${k}|${i}" aria-label="Retirer">×</button></div>`).join('')}
     <button class="link small" data-act="pick" data-v="${day}|${k}|f">+ Ajouter un aliment</button></div></div>`;
 }
 
@@ -697,7 +701,7 @@ function pickSheet(day, slot, mode = 'f') {
     body.innerHTML = `<button class="btn ghost full mt" data-own>+ Créer ma propre recette</button>
       ${L.length ? L.map(r => `<div class="card tap row" data-pick="${r.id}" style="padding:10px">${r.img ? `<img class="thumb" style="width:60px;height:60px" src="${r.img}" alt="" loading="lazy">` : ''}<div class="grow"><div>${esc(r.t)}</div><div class="small muted">${esc(r.time || '')}${r.kcal ? ' · ' + r.kcal + ' kcal' : ''}</div></div></div>`).join('') : '<p class="muted small center mt">Aucune recette ne correspond à ta recherche.</p>'}`;
     body.querySelector('[data-own]').onclick = () => { el.remove(); ui.draft = null; ui.pending = { day, slot, from: ui.tab }; go('table', 'ajout'); };
-    body.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; save(); done(); toast('Ajouté à ta journée'); });
+    body.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { (S.plan[day] = S.plan[day] || {})[slot] = b.dataset.pick; porSet(day, slot, 1); save(); done(); toast('Ajouté à ta journée'); });
   };
   const addedHtml = () => { const a = list(); if (!a.length) return ''; const k = Math.round(a.reduce((x, e) => x + fVals(e).kcal, 0));
     return `<div class="card" style="padding:12px 14px"><div class="row between"><span class="lab">Dans ce repas</span><span class="small muted">${k} kcal</span></div>
@@ -1168,7 +1172,8 @@ const ACT = {
   sucre: () => { ui.tableSeg = 'recettes'; ui.filter = 'encas'; go('table'); },
   pick: v => { const [d, s, m] = v.split('|'); pickSheet(d, s, m === 'r' ? 'r' : 'f'); },
   rmFood: v => { const [d, k, i] = v.split('|'); const a = eatOf(d, k); a.splice(+i, 1); save(); render(); },
-  unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; save(); render(); },
+  unplan: v => { const [d, s] = v.split('|'); if (S.plan[d]) delete S.plan[d][s]; porSet(d, s, 1); save(); render(); },
+  por: v => { const [d, s, q] = v.split('|'); porSet(d, s, +q); save(); render(); },
   seg: v => { ui.tableSeg = v; ui.sub = null; render(); },
   frigoTog: v => { S.frigoD = today(); const f = S.frigo || (S.frigo = []); const i = f.indexOf(v); if (i >= 0) f.splice(i, 1); else f.push(v); save(); render(); },
   frigoClear: () => { S.frigo = []; save(); render(); },
@@ -1181,7 +1186,7 @@ const ACT = {
     const r = R(v), t = today(), p = S.plan[t] = S.plan[t] || {};
     const breakfast = r.type === 'pdj' || ['sucre', 'sale'].includes(r.cat);
     const slot = r.cat === 'dessert' || r.cat === 'encas' ? 's' : breakfast ? 'b' : (!p.l ? 'l' : 'd');
-    p[slot] = v; save(); toast('Ajouté : ' + SLOTS.find(s => s[0] === slot)[1].toLowerCase() + " d'aujourd'hui");
+    p[slot] = v; porSet(t, slot, 1); save(); toast('Ajouté : ' + SLOTS.find(s => s[0] === slot)[1].toLowerCase() + " d'aujourd'hui");
   },
   addCourses: v => { if (!S.extra.includes(v)) S.extra.push(v); save(); toast('Ajouté à tes courses'); },
   rmCourses: v => { S.extra = S.extra.filter(x => x !== v); save(); render(); },
@@ -1199,7 +1204,7 @@ const ACT = {
       ing: d.rows.filter(x => x.f).map(x => { const f = foodOf(x.f); if (!x.g) return x.f; if (f && x.u === 'u2' && U2(f)) return `${x.f} : ${x.g} c. à café`; if (f && x.u === 'u' && f[5]) return `${x.f} : ${x.g} ${f[6]}${parseFloat(x.g) > 1 && !f[6].includes(' ') && !/s$/.test(f[6]) ? 's' : ''}`; return `${x.f} : ${x.g} g`; }), steps: d.steps.split('\n').map(x => x.trim()).filter(Boolean) };
     S.own.push(r); ui.draft = null;
     const pd = ui.pending; ui.pending = null;
-    if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
+    if (pd) { (S.plan[pd.day] = S.plan[pd.day] || {})[pd.slot] = r.id; porSet(pd.day, pd.slot, 1); save(); if (pd.from === 'table') { ui.tableSeg = 'semaine'; ui.day = pd.day; } go(pd.from); toast('Ajouté à ta journée'); return; }
     save(); ui.filter = 'mine'; ui.tableSeg = 'recettes'; go('table'); toast('Recette enregistrée');
   },
   newOwn: () => { ui.draft = null; ui.pending = null; go('table', 'ajout'); },
