@@ -274,6 +274,7 @@ function showMot(after) {
   L.motSeen = today(); save();
   const ph = bsdPhase();
   if (ph && (S.bsdSeen || {})[ph] !== 1) return showBsd(ph, after);
+  if (bsdWe() && !(S.bsdSeen || {}).fin && finList().length) return showFin(finList(), after);
   const nw = C.recipes.filter(r => r.added === today());
   if (nw.length) return showNew(nw, after);
   const h = new Date().getHours(), p = prenom();
@@ -297,6 +298,22 @@ function showNew(nw, after) {
   document.body.appendChild(o);
   o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
   o.querySelector('#bgo').onclick = () => { o.remove(); ui.tableSeg = 'recettes'; ui.filter = 'new'; go('table'); };
+}
+function showFin(list, after) {
+  S.bsdSeen = S.bsdSeen || {}; S.bsdSeen.fin = 1; save();
+  const p = prenom(), n = list.length, f = list[0];
+  const titre = n > 1 ? `${p ? esc(p) + ', tes' : 'Tes'} boîtes arrivent bientôt au bout` : `${p ? esc(p) + ', ta' : 'Ta'} boîte de ${esc(f.name)} arrive bientôt au bout`;
+  const o = document.createElement('div'); o.className = 'bmodal';
+  o.innerHTML = `<div class="bbox" style="padding:0;overflow:hidden"><img src="img/ban/v4.jpg" alt="" style="width:100%;height:150px;object-fit:cover;object-position:50% 56%;display:block">
+  <div style="padding:22px 22px 24px"><span class="lab" style="color:var(--or)">Mon rituel · Spécial week-end</span>
+  <h2 class="serif" style="font-size:25px;line-height:1.15;margin:12px 0 0">${titre}</h2>
+  <div style="margin:12px 0 0">${list.map(x => `<div class="row between small" style="padding:4px 0"><span>${esc(x.name)}</span><b style="color:var(--or)">${stockLeft(x.id) > 0 ? 'vers le ' + dateCourte(stockEnd(x.id)) : 'terminée'}</b></div>`).join('')}</div>
+  <p class="muted" style="margin:12px 0 0;line-height:1.5">Pour ne pas couper ton élan, c'est le bon moment pour passer au rituel de 3 mois : ton mois de Collagène Liquide est <b style="color:var(--brun)">OFFERT</b> dès ${BSD_MIN} d'achat (valeur 79 €), jusqu'au 2 décembre.</p>
+  <a class="btn full" style="margin-top:20px" id="bgo" href="${C.shop}" target="_blank" rel="noopener">Je renouvelle mon rituel</a>
+  <button class="link" style="margin-top:14px" id="bok">Plus tard</button></div></div>`;
+  document.body.appendChild(o);
+  o.querySelector('#bok').onclick = () => { o.remove(); if (after) after(); };
+  o.querySelector('#bgo').addEventListener('click', () => { o.remove(); if (after) after(); });
 }
 function showBsd(ph, after) {
   S.bsdSeen = S.bsdSeen || {}; S.bsdSeen[ph] = 1; save();
@@ -1333,20 +1350,23 @@ const BSD_PHASE = 'pendant', BSD_END = '2026-12-02', BSD_MIN = '145 €';
 // Quand : « dès demain » la veille, « dès aujourd'hui » le jour J, sinon la date
 const bsdQ = () => { const t = today(); return t === '2026-11-21' ? { des: 'Dès demain', apartir: 'à partir de demain' } : t === '2026-11-22' ? { des: "Dès aujourd'hui", apartir: "à partir d'aujourd'hui" } : { des: 'Dès le 22 novembre', apartir: 'à partir du 22 novembre' }; };
 const BSD_PREVIEW = (location.search.match(/[?&]bsd=(avant|pendant)/) || [])[1];
+// Spécial week-end (validé par Clem) : bannière 3 mois + fenêtre « fin de boîte », du 28 au 30 novembre. Aperçu : ?we=1
+const bsdWe = () => bsdPhase() === 'pendant' && (/[?&]we=1/.test(location.search) || (today() >= '2026-11-28' && today() <= '2026-11-30'));
+const finList = () => prepMine().filter(p => { const l = stockLeft(p.id); return l <= 14 && l > -45; });
 function bsdPhase() {
   if (BSD_PREVIEW) return BSD_PREVIEW;
   return BSD_PHASE && today() <= BSD_END ? BSD_PHASE : null;
 }
 const dateCourte = s => { const d = parse(s); return `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS[d.getMonth()]}`; };
 function bsdBanner(ph) {
-  const av = ph === 'avant';
+  const av = ph === 'avant', we = !av && bsdWe();
   const sub = encodeURIComponent('Club Clem · Conseil Belles Sœurs Days');
   return `<div class="card center" style="border:1.5px solid var(--or);padding:0;overflow:hidden">
   <img src="img/ban/v4.jpg" style="width:100%;height:190px;object-fit:cover;object-position:50% 56%;display:block" alt="">
-  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? `Belles Sœurs Days · ${bsdQ().des}` : 'Belles Sœurs Days · En ce moment'}</span>
-  <div class="serif" style="font-size:24px;line-height:1.15;margin-top:8px">Ton mois de Collagène OFFERT</div>${av ? `<p class="small" style="margin:6px 0 0;color:var(--brun)">En avant-première, rien que pour les membres du Club : personne d'autre n'est encore au courant.</p>` : ''}
-  <p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? cap(bsdQ().apartir) + ', dans' : 'Dans'} la limite des stocks disponibles.</p>
-  ${av ? `<button class="btn full mt" data-go="rituel|fiche|collagene">Découvrir mon cadeau</button>` : `<a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">J'en profite</a>`}
+  <div style="padding:18px 20px 20px"><span class="lab" style="color:var(--or);white-space:nowrap;font-size:min(11px,2.85vw);letter-spacing:.1em">${av ? `Belles Sœurs Days · ${bsdQ().des}` : we ? 'Belles Sœurs Days · Spécial week-end' : 'Belles Sœurs Days · En ce moment'}</span>
+  <div class="serif" style="font-size:24px;line-height:1.15;margin-top:8px">${we ? 'Le bon moment pour ton rituel de 3 mois' : 'Ton mois de Collagène OFFERT'}</div>${av ? `<p class="small" style="margin:6px 0 0;color:var(--brun)">En avant-première, rien que pour les membres du Club : personne d'autre n'est encore au courant.</p>` : ''}
+  ${we ? `<p class="small" style="margin:8px 0 0;color:var(--brun);line-height:1.45">Tu es tranquille jusqu'en mars, et ton mois de Collagène Liquide est <b>OFFERT</b> dès ${BSD_MIN} d'achat (valeur 79 €).</p><p class="small muted" style="margin:6px 0 0">Jusqu'au 2 décembre, dans la limite des stocks disponibles.</p>` : `<p class="small muted" style="margin:6px 0 0">Dès ${BSD_MIN} d'achat, d'une valeur de 79 €. ${av ? cap(bsdQ().apartir) + ', dans' : 'Dans'} la limite des stocks disponibles.</p>`}
+  ${av ? `<button class="btn full mt" data-go="rituel|fiche|collagene">Découvrir mon cadeau</button>` : `<a class="btn full mt" href="${C.shop}" target="_blank" rel="noopener">${we ? 'Je choisis mon rituel' : "J'en profite"}</a>`}
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--filet);display:flex;flex-direction:column;gap:8px;text-align:left">
   <a style="font-size:13px;color:var(--txt2);text-decoration:none;line-height:1.4" href="mailto:clemence@belles-soeurs.com?subject=${sub}">Un conseil pour choisir ? <u style="color:var(--brun)">Écris-moi</u></a>
   <a style="font-size:13px;color:var(--txt2);text-decoration:none;line-height:1.4" href="mailto:contact@belles-soeurs.com">Une question sur ta commande ou ta livraison ? <u style="color:var(--brun)">contact@belles-soeurs.com</u></a>
